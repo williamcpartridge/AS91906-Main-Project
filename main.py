@@ -2,14 +2,13 @@ import pygame
 import random
 
 clock = pygame.time.Clock()
-FPS = 20
+FPS = 10
 
 scr_x=640 ; scr_y=480
 fullscreen = False
 done = False
 x, y = 0, 0
 eaten = False
-apple_count = 0
 ax = 0
 ay = 0
 
@@ -31,11 +30,11 @@ snake_y = [0]
 direction_x = 1
 direction_y = 0
 
+apple_list = []
+
 def apple():
-    ax = random.randint(0, round(scr_x/10))
-    ay = random.randint(0, round(scr_y/10))
-    print(ax, ay)
-    print((10*ax, 10*ay))
+    ax = 10*random.randint(0, round(scr_x/10))
+    ay = 10*random.randint(0, round(scr_y/10))
     return (ax, ay)
 
     
@@ -61,26 +60,36 @@ while not done:
                 direction_x = -1
                 direction_y = 0
 
-    snake_y.insert(0, snake_y[0] + direction_y)
-    snake_x.insert(0, snake_x[0] + direction_x)
+    if snake_x[0] + direction_x in snake_x and snake_y[0] + direction_y in snake_y:
+        done = True
+    elif snake_x[0] + direction_x < 0 or snake_y[0] + direction_y < 0 or snake_x[0] + direction_x > (scr_x-10)/10 or snake_y[0] + direction_y > (scr_y-10)/10:
+        done = True
+    else:
+        snake_y.insert(0, snake_y[0] + direction_y)
+        snake_x.insert(0, snake_x[0] + direction_x)
+
+
     if not eaten:
         snake_x.pop()
         snake_y.pop()
+    
+    eaten = False
 
     screen.fill((0, 0, 0))
-    if apple_count <= 0:
-        print("hejhehe")
+    if len(apple_list) <= 0:
         ax, ay = apple()
-        print(ax,ay)
-        apple_count += 1
-    screen.blit(player_surf, (10*ax, 10*ay))
+        apple_list.append((ax, ay))
+        print(apple_list)
+    
+    for i in range(len(apple_list)):
+        screen.blit(apple_surf, apple_list[i])
 
     for seg in range(len(snake_x)):
         screen.blit(player_surf, (10*snake_x[seg], 10*snake_y[seg]))
-
-    # screen.blit(player_surf, (180, 290))
-    
-
+        if 10*snake_x[seg] == ax and 10*snake_y[seg] == ay:
+            eaten = True
+            print((10*snake_x[seg], 10*snake_y[seg]))
+            apple_list.remove((10*snake_x[seg], 10*snake_y[seg]))
 
     pygame.display.flip()
     clock.tick(FPS)
