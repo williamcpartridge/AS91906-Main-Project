@@ -27,7 +27,7 @@ apple_surf = pygame.Surface((10, 10))
 apple_surf.fill((255, 0, 0))
 
 bg_surf = pygame.Surface((10, 10))
-bg_surf.fill((10, 255, 10))
+bg_surf.fill((10, 200, 10))
 
 snake_x = [0]
 snake_y = [0]
@@ -44,9 +44,9 @@ def game_init():
     for x in range(round(scr_x/10)):
         for y in range(round(scr_y/10)):
             if tile % 2 == 0:
-                bg_surf.fill((10, 230, 10))
+                bg_surf.fill((10, 180, 10))
             else:
-                bg_surf.fill((30, 220, 30))
+                bg_surf.fill((30, 160, 30))
 
             screen.blit(bg_surf, (x*10, y*10))
             tile += 1
