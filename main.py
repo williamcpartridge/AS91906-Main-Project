@@ -1,12 +1,13 @@
 import pygame
 import random
+from settings import Settings
 
 clock = pygame.time.Clock()
 FPS = 60
 
 scr_x=640 ; scr_y=480
 fullscreen = False
-done = False
+alive = True
 x, y = 0, 0
 eaten = False
 ax = 0
@@ -58,17 +59,17 @@ def apple():
     return (ax, ay)
 
     
-game_init()
+#game_init()
 
-while not done:
+while alive:
     input_num = 0
     fc += 1
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            done = True
+            alive = False
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                done = True
+                alive = False
             
             if input_num == 0:
                 if direction_y != 1 and event.key == pygame.K_w:
@@ -90,9 +91,9 @@ while not done:
 
     if not fc%6:
         if snake_x[0] + direction_x in snake_x and snake_y[0] + direction_y in snake_y:
-            done = True
+            alive = False
         elif snake_x[0] + direction_x < 0 or snake_y[0] + direction_y < 0 or snake_x[0] + direction_x > (scr_x-10)/10 or snake_y[0] + direction_y > (scr_y-10)/10:
-            done = True
+            alive = False
         else:
             snake_y.insert(0, snake_y[0] + direction_y)
             snake_x.insert(0, snake_x[0] + direction_x)

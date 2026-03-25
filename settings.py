@@ -1,4 +1,5 @@
 import json
+from os.path import exists
 
 DEFAULTS = {
     "brightness": 100,
@@ -13,13 +14,6 @@ MAX_BRIGHTNESS = 200
 MIN_VOLUME = 0
 MAX_VOLUME = 100
 
-
-
-
-#with open('test.json', 'r') as f:
-#    loaded_data = json.load(f)
-#    print("Data read successfully:")
-#    print(loaded_data)
 
 
 class Settings():
@@ -65,16 +59,18 @@ class Settings():
             json.dump(self._settings, f)
             print("Data written successfully")
 
+    def read_settings(self):
+        with open(TEST_FILENAME, 'r') as f:
+            self._settings = json.load(f)
+            print("Data read successfully:")
+            print(self._settings)
+
     brightness = property(get_brightness, set_brightness)
     fullscreen = property(get_fullscreen, set_fullscreen)
     volume = property(get_volume, set_volume, write_setting)
-    
 
-
-
-    
 
 if __name__ == "__main__":
     my_settings = Settings(TEST_FILENAME)
-    my_settings.brightness = 50
     my_settings.write_setting()
+    my_settings.read_settings()
