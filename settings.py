@@ -21,7 +21,7 @@ class Settings():
     def __init__ (self, filename): 
         self._filename = filename
         self._settings = DEFAULTS
-        self.read_settings(filename)
+        self.read_settings()
 
 
     # write setting to the setting file
@@ -90,4 +90,6 @@ class Settings():
 
 if __name__ == "__main__":
     my_settings = Settings(TEST_FILENAME)
-    
+    my_settings.brightness = 50
+    my_settings.fullscreen = True
+    my_settings.read_settings

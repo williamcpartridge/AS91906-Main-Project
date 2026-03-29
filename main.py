@@ -58,6 +58,9 @@ def apple():
     ay = 10*random.randint(0, round(scr_y/10))
     return (ax, ay)
 
+
+
+
     
 #game_init()
 
@@ -105,7 +108,7 @@ while alive:
         eaten = False
 
     screen.fill((0, 0, 0))
-    game_init()
+    #game_init()
 
     if len(apple_list) <= 0:
         ax, ay = apple()
