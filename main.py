@@ -125,6 +125,8 @@ while alive:
             print((10*snake_x[seg], 10*snake_y[seg]))
             apple_list.remove((10*snake_x[seg], 10*snake_y[seg]))
 
+    screen.blit(pygame.image.load(), (0, 0))
+
     pygame.display.flip()
     clock.tick(FPS)
 
