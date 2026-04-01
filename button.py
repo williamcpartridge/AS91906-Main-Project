@@ -21,5 +21,3 @@ class Button():
             return True
         else:
             return False
-
-        

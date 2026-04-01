@@ -8,9 +8,6 @@ clock = pygame.time.Clock()
 FPS = 60
 
 scr_x=640 ; scr_y=480
-x, y = 0, 0
-
-input_num = 0
 
 pygame.init()
 
@@ -28,9 +25,6 @@ bg_surf = pygame.transform.scale(pygame.image.load('images\\main_gui\\bg.jpg').c
 bg_rect = bg_surf.get_rect(center=(screen.get_width()/2, screen.get_height()/2))
 
 
-tile  = 1
-
-apple_list = []
 
 font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 75)
 
@@ -44,15 +38,14 @@ def apple():
 def main_menu(screen, bg_surf, bg_rect):
     
     while True:
-        MOUSE_POS = pygame.mouse.get_pos()
-        PLAY_BUTTON = Button((screen.get_width()/2, 100), font, 'Play')
-
+        mouse_pos = pygame.mouse.get_pos()
+        play_button = Button((screen.get_width()/2, 100), font, 'Play')
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if PLAY_BUTTON.pressed(MOUSE_POS):
+                if play_button.pressed(mouse_pos):
                     main_game_loop(screen)
             if event.type == pygame.VIDEORESIZE:
                 screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
@@ -64,7 +57,7 @@ def main_menu(screen, bg_surf, bg_rect):
 
 
         screen.blit(bg_surf, bg_rect)
-        PLAY_BUTTON.draw(screen)
+        play_button.draw(screen)
 
 
         pygame.display.flip()
@@ -81,6 +74,8 @@ def main_game_loop(screen):
     eaten = False
     ax = 0
     ay = 0
+    input_num = 0
+    apple_list = []
 
 
     while alive:

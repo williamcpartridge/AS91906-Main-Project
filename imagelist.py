@@ -1,4 +1,5 @@
 from os.path import exists
+import debug
 import pygame
 
 class ImageList():
@@ -16,11 +17,21 @@ class ImageList():
     
     images = property(get_images, None, None)
 
+
+# TESTING
+debug.DEBUG_LEVEL = 2
 if __name__ == "__main__":
+    TEST_X = 100
+    TEST_Y = 100
+    TEST_W = 30
+    TEST_H = 30
+
     image_obj = ImageList("images\\enemy\\enemy", 20, 20)
     pygame.init()
 
-    screen = pygame.display.set_mode((500, 600), pygame.RESIZABLE)
+    my_rect = pygame.Rect(TEST_X, TEST_Y, TEST_W, TEST_H)
+
+    screen = pygame.display.set_mode((600, 400), pygame.RESIZABLE)
     pygame.display.set_caption("Snake Game by Me")
     quit_game = False
     while not quit_game:
@@ -28,11 +39,11 @@ if __name__ == "__main__":
             if event.type == pygame.QUIT:
                 quit_game = True
 
-        screen.blit(pygame.image.load('images\\enemy\\enemy0.jpg'), (0, 0))
+        screen.blit(image_obj.images[0], my_rect)
 
         pygame.display.flip()
 
 
 
-    pygame.quit()
-    quit()
+pygame.quit()
+quit()
