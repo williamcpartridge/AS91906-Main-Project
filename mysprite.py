@@ -39,6 +39,44 @@ class MySprite():
             print("SOMTHING WENT WRONG\n    Parametres:", "\nx:", x, "\ny:", y, "\nwidth:", w, "\nheight:", h)
             exit(0)
 
+    def get_x(self):
+        return self._x
+
+    def set_x(self, x):
+        if x >= 0 and x < self._screen.get_width():
+            self._x = x
+        elif x < 0:
+            self._x = 0
+        else:
+            self._x = self._screen.get_width()
+        
+    def get_y(self):
+        return self._y
+
+    def set_y(self, y):
+        if y >= 0 and y < self._screen.get_height():
+            self._y = y
+        elif y < 0:
+            self._y = 0
+        else:
+            self._y = self._screen.get_height() - 1
+
+    x = property(get_x, set_x)
+    y = property(get_y, set_y)
+
+    def set_pos(self, x, y):
+        self.set_x(x)
+        self.set_y(y)
+
+    def move(self, dx=None, dy=None):
+        if not dx is None:
+            self._dx = dx
+        if not dy is None:
+            self._dy = dy
+
+        self._set_x(self._x, self._dx)
+        self._set_y(self._x, self._dy)           
+
     def set_animation(self, start_frame=0, end_frame=0, delay=0, repeat=-1):
             if start_frame >= 0 and start_frame < len(self._images.images):
                 self._start_frame = start_frame
@@ -75,14 +113,10 @@ class MySprite():
                 print("colideee")
             else:
                 print("not colide")
-
-    def animate(self):
-        pass
-        
-
-
+                
     def draw(self):
         self._screen.blit(self._images[self._current_frame])
+
 
 if __name__ == "__main__":
     pygame.init()
@@ -110,7 +144,8 @@ if __name__ == "__main__":
             if event.type == pygame.QUIT:
                 quit_game = True
 
-        screen.blit(sprite1, my_rect)
+        sprite1.draw()
+        sprite1.animate()
 
         pygame.display.flip()
 
