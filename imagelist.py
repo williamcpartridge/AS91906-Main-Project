@@ -6,8 +6,8 @@ class ImageList():
     def __init__(self, filename, width, height):
         self._images = []
         count = 0
-        while exists(filename+str(count)+'.jpg'):
-            image = pygame.image.load(filename+str(count)+'.jpg')
+        while exists(filename+str(count)+'.png'):
+            image = pygame.image.load(filename+str(count)+'.png')
             scaled = pygame.transform.smoothscale(image, [width, height])
             self._images.append(scaled)
             count += 1
@@ -26,7 +26,7 @@ if __name__ == "__main__":
     TEST_W = 30
     TEST_H = 30
 
-    image_obj = ImageList("images\\enemy\\enemy", 20, 20)
+    image_obj = ImageList("images\\apple\\apple", 20, 20)
     pygame.init()
 
     my_rect = pygame.Rect(TEST_X, TEST_Y, TEST_W, TEST_H)
