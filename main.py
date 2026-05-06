@@ -16,17 +16,14 @@ pygame.init()
 
 pygame.display.set_caption('Snake game')
 
+apple_surf = pygame.Surface((10, 10))
+
 screen = pygame.display.set_mode((scr_x, scr_y), pygame.RESIZABLE)
 enemy_images = ImageList("images\\enemy\\enemy", 100, 100)
-apple_images = ImageList("images\\apple\\apple", 100, 100)
-snake_head_img = ImageList("images\\snake\\head\\snake_head", 100, 100)
-snake_body_img = ImageList("images\\snake\\body\\snake_body", 100, 100)
+apple_images = ImageList("images\\apple\\apple", apple_surf.width, apple_surf.height)
+snake_head_img = ImageList("images\\snake\\head\\snake_head", snake_w, snake_h)
+snake_body_img = ImageList("images\\snake\\body\\snake_body", snake_w, snake_h)
 
-snake_head = MySprite(snake_x, snake_y, snake_w, snake_h, snake_head_img, screen)
-snake_body = MySprite(snake_x, snake_y, snake_w, snake_h, snake_body_img, screen)
-
-apple_surf = pygame.Surface((10, 10))
-apple_surf.fill((255, 0, 0))
 
 bg_surf = pygame.transform.scale(pygame.image.load('images\\main_gui\\bg.jpg').convert_alpha(), (screen.get_width(), screen.get_height()))
 bg_rect = bg_surf.get_rect(center=(screen.get_width()/2, screen.get_height()/2))
@@ -73,16 +70,16 @@ def main_menu(screen, bg_surf, bg_rect):
 def main_game_loop(screen):
     alive = True
     fc = 0
-    snake_x = [0]
-    snake_y = [0]
     direction_x = 1
     direction_y = 0
+    store_dirx = 0
+    store_diry = 0
     eaten = False
     ax = 0
     ay = 0
     input_num = 0
     apple_list = []
-    snake_length = 1
+    segments = [MySprite(snake_x, snake_y, snake_w, snake_h, snake_head_img, screen)]
 
 
     while alive:
@@ -101,80 +98,59 @@ def main_game_loop(screen):
                     alive = False
                 if input_num == 0:
                     if direction_y != 1 and event.key == pygame.K_w:
+                        store_dirx = direction_x
+                        store_diry = direction_y
                         direction_x = 0
                         direction_y = -1
                         input_num = 1
                     if direction_y != -1 and event.key == pygame.K_s:
+                        store_dirx = direction_x
+                        store_diry = direction_y
                         direction_x = 0
                         direction_y = 1
                         input_num = 1
                     if direction_x != -1 and event.key == pygame.K_d:
+                        store_dirx = direction_x
+                        store_diry = direction_y
                         direction_x = 1
                         direction_y = 0
                         input_num = 1
                     if direction_x != 1 and event.key == pygame.K_a:
+                        store_dirx = direction_x
+                        store_diry = direction_y
                         direction_x = -1
                         direction_y = 0
                         input_num = 1
-        if snake_length == 1:
-            snake_head.move(10*direction_x, 10*direction_y, 1)
-        else:
-            snake_head.move(10*direction_x, 10*direction_y, 1)
-            for i in len(snake_length):
-                snake_body.move((i + 2)10*direction_x, 10*direction_y, 1)
-        """
-        if not fc%6:
-            if snake_x[0] + direction_x in snake_x and snake_y[0] + direction_y in snake_y:
-                alive = False
-            elif snake_x[0] + direction_x < 0 or snake_y[0] + direction_y < 0 or snake_x[0] + direction_x > (screen.get_width()-10)/10 or snake_y[0] + direction_y > (screen.get_height()-10)/10:
-                alive = False
-            else:
-                seg_count = 0
-                for x in snake_x:
-                    for y in snake_y:
-                        if seg_count == 0:
-                            snake_head.move(direction_x, direction_y, 1)
-                            snake_head.draw()
-                        else:
-                            snake_body.move(direction_x, direction_y, 1)
-                            snake_body.draw()
-        
-
-            if not eaten:
-                snake_x.pop()
-                snake_y.pop()
-        
-            eaten = False
-        """
-
-        screen.fill((0, 0, 0))
+        if fc%6:
+            for seg in segments:
+                print(seg)
+                seg.move(10*direction_x, 10*direction_y, 0.1)
+                for apple in apple_list:
+                    if seg.collide(apple.get_rect()):
+                        new = MySprite(snake_x, snake_y, snake_w, snake_h, snake_body_img, screen)
+                        new.set_pos(seg.get_x() - store_dirx, seg.get_y() - store_diry)
+                        segments.append(new)
 
         if len(apple_list) <= 0:
             ax, ay = spawn_apple()
             apple_list.append(MySprite(ax, ay, apple_surf.width, apple_surf.height, apple_images, screen))
             apple_list[-1].set_animation(0, 2, 1, True)
 
-            print(apple_list)
+        screen.fill((0, 0, 0))
+
         
         for apple in apple_list:
             apple.draw()
         
-        snake_head.draw()
-        snake_body.draw()
-
-
-        '''
-            if 10*snake_x[seg] == ax and 10*snake_y[seg] == ay:
-                eaten = True
-                print((10*snake_x[seg], 10*snake_y[seg]))
-                apple_list.remove((10*snake_x[seg], 10*snake_y[seg]))
-        '''
+        for seg in segments:
+            seg.draw()
 
 
         pygame.display.flip()
         clock.tick(FPS)
 
 if __name__ == "__main__":
-    main_menu(screen, bg_surf, bg_rect)
+    #main_menu(screen, bg_surf, bg_rect)
+    main_game_loop(screen)
 
 pygame.quit()

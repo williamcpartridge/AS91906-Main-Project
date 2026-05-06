@@ -8,7 +8,7 @@ class ImageList():
         count = 0
         while exists(filename+str(count)+'.png'):
             image = pygame.image.load(filename+str(count)+'.png')
-            scaled = pygame.transform.smoothscale(image, [width, height])
+            scaled = pygame.transform.scale_by(image, [1, 1])
             self._images.append(scaled)
             count += 1
 
