@@ -9,7 +9,7 @@ TEST_W = 30
 TEST_H = 30
 
 class MySprite():
-    def __init__(self, x, y, w, h, images, screen):
+    def __init__(self, x, y, w, h, images, screen, angle=0):
         valid = True
         if x >= 0 and x <= screen.get_width():
             self._x = x
@@ -30,6 +30,11 @@ class MySprite():
         else: 
             print("Hieght too small")
         self._images = images
+
+        if angle >= 0 and angle <= 360:
+            self._angle = angle
+        else:
+            self._angle = 0
 
         self._screen = screen
         
@@ -70,6 +75,12 @@ class MySprite():
 
     x = property(get_x, set_x)
     y = property(get_y, set_y)
+
+    def rotate(self, angle):
+        if angle >= 0 and angle <= 360:
+            self._angle = angle
+        else:
+            self._angle = 0
 
     def set_pos(self, x, y):
         self.set_x(x)
@@ -128,7 +139,7 @@ class MySprite():
                 return False
                 
     def draw(self):
-        self._screen.blit(self._images.images[self._current_frame], self.get_rect())
+        self._screen.blit(pygame.transform.rotate(self._images.images[self._current_frame], self._angle), self.get_rect())
 
 
 if __name__ == "__main__":

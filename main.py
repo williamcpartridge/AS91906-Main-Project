@@ -79,7 +79,8 @@ def main_game_loop(screen):
     ay = 0
     input_num = 0
     apple_list = []
-    segments = [MySprite(snake_x, snake_y, snake_w, snake_h, snake_head_img, screen)]
+    angle = 270
+    segments = [MySprite(snake_x, snake_y, snake_w, snake_h, snake_head_img, screen, angle)]
 
 
     while alive:
@@ -102,24 +103,30 @@ def main_game_loop(screen):
                         store_diry = direction_y
                         direction_x = 0
                         direction_y = -1
+                        angle = 0
+
                         input_num = 1
                     if direction_y != -1 and event.key == pygame.K_s:
                         store_dirx = direction_x
                         store_diry = direction_y
                         direction_x = 0
                         direction_y = 1
+                        angle = 180
+
                         input_num = 1
                     if direction_x != -1 and event.key == pygame.K_d:
                         store_dirx = direction_x
                         store_diry = direction_y
                         direction_x = 1
                         direction_y = 0
+                        angle = 270
                         input_num = 1
                     if direction_x != 1 and event.key == pygame.K_a:
                         store_dirx = direction_x
                         store_diry = direction_y
                         direction_x = -1
                         direction_y = 0
+                        angle = 90
                         input_num = 1
         if fc%6:
             for seg in segments:
@@ -130,6 +137,7 @@ def main_game_loop(screen):
                         new = MySprite(snake_x, snake_y, snake_w, snake_h, snake_body_img, screen)
                         new.set_pos(seg.get_x() - store_dirx, seg.get_y() - store_diry)
                         segments.append(new)
+                        apple_list.remove(apple)
 
         if len(apple_list) <= 0:
             ax, ay = spawn_apple()
