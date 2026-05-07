@@ -79,7 +79,8 @@ def main_game_loop(screen):
     ay = 0
     input_num = 0
     apple_list = []
-    angle = 270
+    angles = [270]
+    angle = 0
     segments = [MySprite(snake_x, snake_y, snake_w, snake_h, snake_head_img, screen, angle)]
 
 
@@ -128,14 +129,21 @@ def main_game_loop(screen):
                         direction_y = 0
                         angle = 90
                         input_num = 1
+
+        
+        
         if fc%6:
             for seg in segments:
-                print(seg)
+                angles.insert(0, angle)
+                if len(angles) > len(segments):
+                    angles.pop()
+                print(angles)
                 seg.move(10*direction_x, 10*direction_y, 0.1)
+                seg.rotate(angle)
                 for apple in apple_list:
                     if seg.collide(apple.get_rect()):
                         new = MySprite(snake_x, snake_y, snake_w, snake_h, snake_body_img, screen)
-                        new.set_pos(seg.get_x() - store_dirx, seg.get_y() - store_diry)
+                        new.set_pos(seg.get_x() - store_dirx*snake_w, seg.get_y() - store_diry*snake_w)
                         segments.append(new)
                         apple_list.remove(apple)
 
@@ -158,7 +166,7 @@ def main_game_loop(screen):
         clock.tick(FPS)
 
 if __name__ == "__main__":
-    #main_menu(screen, bg_surf, bg_rect)
-    main_game_loop(screen)
+    main_menu(screen, bg_surf, bg_rect)
+    #main_game_loop(screen)
 
 pygame.quit()
