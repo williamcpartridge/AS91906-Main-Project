@@ -151,7 +151,7 @@ debug.DEBUG_LEVEL = 2
 if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode((640, 480), pygame.RESIZABLE)
-    images = ImageList("images\\apple\\apple", 100, 100)
+    images = ImageList("images\\apple\\apple", TEST_W, TEST_H)
 
     spritelist = []
     spritelist.append(MySprite(TEST_X, TEST_Y, TEST_W, TEST_H, images, screen))

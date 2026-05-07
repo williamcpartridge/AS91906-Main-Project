@@ -10,7 +10,7 @@ clock = pygame.time.Clock()
 FPS = 60
 
 scr_x=640 ; scr_y=480
-snake_x, snake_y, snake_w, snake_h = 0, 0, 10, 10
+snake_x, snake_y, snake_w, snake_h = 0, 0, 30, 30
 
 pygame.init()
 
@@ -79,7 +79,7 @@ def main_game_loop(screen):
     ay = 0
     input_num = 0
     apple_list = []
-    angles = [270]
+    movement = [270]
     angle = 0
     segments = [MySprite(snake_x, snake_y, snake_w, snake_h, snake_head_img, screen, angle)]
 
@@ -132,18 +132,19 @@ def main_game_loop(screen):
 
         
         
-        if fc%6:
-            for seg in segments:
-                angles.insert(0, angle)
-                if len(angles) > len(segments):
-                    angles.pop()
-                print(angles)
-                seg.move(10*direction_x, 10*direction_y, 0.1)
-                seg.rotate(angle)
+        if not fc%30:
+            movement.insert(0, (direction_x, direction_y, angle))
+            if len(movement) > len(segments):
+                movement.pop()
+            print(movement)
+            for i in range(len(segments)):
+                segments[i].rotate(movement[i][2])
+
+                segments[i].move(snake_w*movement[i][0], snake_h*movement[i][1], 0.1)
                 for apple in apple_list:
-                    if seg.collide(apple.get_rect()):
+                    if segments[i].collide(apple.get_rect()):
                         new = MySprite(snake_x, snake_y, snake_w, snake_h, snake_body_img, screen)
-                        new.set_pos(seg.get_x() - store_dirx*snake_w, seg.get_y() - store_diry*snake_w)
+                        #new.set_pos(seg.get_x() + store_dirx*snake_w, seg.get_y() + store_diry*snake_w)
                         segments.append(new)
                         apple_list.remove(apple)
 
