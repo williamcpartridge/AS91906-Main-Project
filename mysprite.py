@@ -126,10 +126,15 @@ class MySprite():
                         self._current_frame += 1
                     elif self._repeat == True:
                         self._current_frame = self._start_frame
-                    self._next_frame = self._next_frame + self._delay                
+                    self._next_frame = self._next_frame + self._delay       
+
+    def set_frame(self, frame):
+        self._current_frame = frame
             
     def get_rect(self):
-        return pygame.Rect(self._x, self._y, self._w, self._h)
+        rect = pygame.Rect(0, 0, self._w, self._h)
+        rect.center = (self._x, self._y)
+        return rect
 
     def collide(self, other_rect):
         if isinstance(other_rect, pygame.Rect):

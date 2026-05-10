@@ -8,7 +8,8 @@ class ImageList():
         count = 0
         while exists(filename+str(count)+'.png'):
             image = pygame.image.load(filename+str(count)+'.png')
-            scaled = pygame.transform.scale(image, [width, width/(image.width / image.height)])
+            aspectratio = image.get_width() / image.get_height()
+            scaled = pygame.transform.scale(image, [width, width / aspectratio])
             self._images.append(scaled)
             count += 1
 
