@@ -37,6 +37,11 @@ bg_rect = bg_surf.get_rect(center=(screen.get_width()/2, screen.get_height()/2))
 
 font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 75)
 
+def get_cell_x(x):
+    return int(x/cell_width)
+
+def get_cell_y(y):
+    return int(y/cell_height)
 
 def spawn_apple():
     ax = (cell_width*random.randint(0, cell_cx - 1)) + apple_surf.get_width()/2
@@ -48,7 +53,9 @@ def main_menu(screen, bg_surf, bg_rect):
     
     while True:
         mouse_pos = pygame.mouse.get_pos()
-        play_button = Button((screen.get_width()/2, 100), font, 'Play')
+        play_button = Button((screen.get_width()/2, 2*(screen.get_height()/8)), font, 'Play')
+        exit_button = Button((screen.get_width()/2, 6*(screen.get_height()/8)), font, 'Exit')
+        settings_button = Button((screen.get_width()/2, 4*(screen.get_height()/8)), font, 'Settings')
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -56,6 +63,11 @@ def main_menu(screen, bg_surf, bg_rect):
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if play_button.pressed(mouse_pos):
                     main_game_loop(screen)
+                if exit_button.pressed(mouse_pos):
+                    print("bye bye")
+                    pygame.quit()
+                if settings_button.pressed(mouse_pos):
+                    print("Settings")
             if event.type == pygame.VIDEORESIZE:
                 screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
                 bg_surf = pygame.transform.scale(pygame.image.load('images\\main_gui\\bg.jpg').convert_alpha(), (screen.get_width(), screen.get_height()))
@@ -67,6 +79,8 @@ def main_menu(screen, bg_surf, bg_rect):
 
         screen.blit(bg_surf, bg_rect)
         play_button.draw(screen)
+        exit_button.draw(screen)
+        settings_button.draw(screen)
 
 
         pygame.display.flip()
@@ -104,25 +118,24 @@ def main_game_loop(screen):
                 if event.key == pygame.K_ESCAPE:
                     alive = False
                 if input_num == 0:
-                    if event.key == pygame.K_w:
-                        if movement[0][2] != 180:
-                            direction_x = 0
-                            direction_y = -1
-                            angle = 0
+                    if movement[0][2] != 180 and event.key == pygame.K_w or movement[0][2] != 180 and event.key == pygame.K_UP:
+                        direction_x = 0
+                        direction_y = -1
+                        angle = 0
 
                         input_num = 1
-                    if movement[0][2] != 0 and event.key == pygame.K_s:
+                    if movement[0][2] != 0 and event.key == pygame.K_s or movement[0][2] != 0 and event.key == pygame.K_DOWN:
                         direction_x = 0
                         direction_y = 1
                         angle = 180
 
                         input_num = 1
-                    if movement[0][2] != 90 and event.key == pygame.K_d:
+                    if movement[0][2] != 90 and event.key == pygame.K_d or movement[0][2] != 90 and event.key == pygame.K_RIGHT:
                         direction_x = 1
                         direction_y = 0
                         angle = 270
                         input_num = 1
-                    if movement[0][2] != 270 and event.key == pygame.K_a:
+                    if movement[0][2] != 270 and event.key == pygame.K_a or movement[0][2] != 270 and event.key == pygame.K_LEFT:
                         direction_x = -1
                         direction_y = 0
                         angle = 90
@@ -130,8 +143,10 @@ def main_game_loop(screen):
 
         
         
-        if not fc%30:
+        if not fc%20:
+            tiles.tile(segments[-2].get_x(), segments[-2].get_y())
             tiles.tile(segments[-1].get_x(), segments[-1].get_y())
+            tiles.tile(segments[0].get_x(), segments[0].get_y())
 
             movement.insert(0, (direction_x, direction_y, angle))
             if len(movement) > len(segments):
@@ -145,14 +160,22 @@ def main_game_loop(screen):
 
                 segments[i].move(cell_width*movement[i][0], cell_height*movement[i][1])
                 for apple in apple_list:
-                    if int(segments[i].get_x()/cell_width) == int(apple.get_x()/cell_width) and int(segments[i].get_y()/cell_height) == int(apple.get_y()/cell_height):#segments[i].collide(apple.get_rect()):
+                    if get_cell_x(segments[i].get_x()) == get_cell_x(apple.get_x()) and get_cell_y(segments[i].get_y()) == get_cell_y(apple.get_y()):#segments[i].collide(apple.get_rect()):
                         new = MySprite(segments[-1].get_x(), segments[-1].get_y(), cell_width, cell_height, snake_body_img, screen)
                         new.rotate(movement[-1][2])
                         segments.append(new)
                         apple_list.remove(apple)
                         segments[-2].set_frame(1)
-            tiles.tile(segments[-1].get_x(), segments[-1].get_y())
+                
+            for segment in segments:
+                if segment != segments[0]:
+                    if get_cell_x(segments[0].get_x()) == get_cell_x(segment.get_x()) and get_cell_y(segments[0].get_y()) == get_cell_y(segment.get_y()):
+                        alive = False
+                
+            if segments[0].get_x() < cell_width/2 or segments[0].get_x() > screen.get_width() - cell_width/2 or segments[0].get_y() < cell_height/2 or segments[0].get_y() > screen.get_height() - cell_height/2:
+                alive = False
 
+            print(segments)
 
         if len(apple_list) <= 0:
             ax, ay = spawn_apple()
