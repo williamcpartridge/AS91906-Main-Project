@@ -143,7 +143,7 @@ def main_game_loop(screen):
 
         
         
-        if not fc%20:
+        if not fc%60:
             tiles.tile(segments[-2].get_x(), segments[-2].get_y())
             tiles.tile(segments[-1].get_x(), segments[-1].get_y())
             tiles.tile(segments[0].get_x(), segments[0].get_y())
@@ -166,6 +166,19 @@ def main_game_loop(screen):
                         segments.append(new)
                         apple_list.remove(apple)
                         segments[-2].set_frame(1)
+
+            for i in range(len(movement)):
+                if i != 0 and len(segments) > 2 and i != len(movement)-1:
+                    if movement[i-1][2] != movement[i+1][2]:
+                        if movement[i+1][2] - movement[i-1][2] == -90:
+                            segments[i].set_frame(3)
+                        elif movement[i-1][2] - movement[i+1][2] == -90:
+                            segments[i].set_frame(2)
+                    else:
+                        segments[i].set_frame(1)
+                        
+
+
                 
             for segment in segments:
                 if segment != segments[0]:
