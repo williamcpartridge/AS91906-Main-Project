@@ -1,3 +1,4 @@
+import os
 import pygame
 import random
 from settings import Settings
@@ -7,23 +8,37 @@ from imagelist import ImageList
 from tilespawn import TileSpawn
 
 
+
+pygame.init()
+
 clock = pygame.time.Clock()
 FPS = 60
 
 cell_width, cell_height = 40, 40
 cell_cx, cell_cy = 6, 5
 
+fullscreen = False
+
+if fullscreen:
+    os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
+    if cell_cx > cell_cy:
+        cell_width = pygame.display.Info().current_h / cell_cy
+        cell_height = pygame.display.Info().current_h / cell_cy
+    else:
+        cell_width = pygame.display.Info().current_w / cell_cx
+        cell_height = pygame.display.Info().current_w / cell_cx
+
 snake_x, snake_y = cell_width+(cell_width/2), cell_height/2
 scr_x=cell_width*cell_cx ; scr_y=cell_width*cell_cy
 
+menu_screen_x, menu_screen_y = 640, 480
 
-pygame.init()
 
 pygame.display.set_caption('Snake game')
 
 apple_surf = pygame.Surface((cell_width, cell_height))
 
-screen = pygame.display.set_mode((scr_x, scr_y), pygame.RESIZABLE)
+screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.RESIZABLE)
 enemy_images = ImageList("images\\enemy\\enemy", 100, 100)
 apple_images = ImageList("images\\apple\\apple", apple_surf.get_width(), apple_surf.get_height())
 snake_head_img = ImageList("images\\snake\\head\\snake_head", cell_width, cell_height)
@@ -35,7 +50,7 @@ bg_surf = pygame.transform.scale(pygame.image.load('images\\main_gui\\bg.jpg').c
 bg_rect = bg_surf.get_rect(center=(screen.get_width()/2, screen.get_height()/2))
 
 
-font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 75)
+
 
 def get_cell_x(x):
     return int(x/cell_width)
@@ -49,45 +64,51 @@ def spawn_apple():
     return (ax, ay)
 
 
-def main_menu(screen, bg_surf, bg_rect):
+def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y):
+    font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', int(menu_screen_x/12))
     
     while True:
         mouse_pos = pygame.mouse.get_pos()
-        play_button = Button((screen.get_width()/2, 2*(screen.get_height()/8)), font, 'Play')
-        exit_button = Button((screen.get_width()/2, 6*(screen.get_height()/8)), font, 'Exit')
-        settings_button = Button((screen.get_width()/2, 4*(screen.get_height()/8)), font, 'Settings')
+        play_button = Button(3, 1, font, 'Play', screen)
+        settings_button = Button(3, 2, font, 'Settings', screen)
+        exit_button = Button(3, 3, font, 'Exit', screen)
+
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if play_button.pressed(mouse_pos):
-                    main_game_loop(screen)
+                    screen = pygame.display.set_mode((scr_x, scr_y), pygame.RESIZABLE)
+                    main_game_loop(screen, menu_screen_x, menu_screen_y)
                 if exit_button.pressed(mouse_pos):
                     print("bye bye")
                     pygame.quit()
                 if settings_button.pressed(mouse_pos):
                     print("Settings")
             if event.type == pygame.VIDEORESIZE:
-                screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
-                bg_surf = pygame.transform.scale(pygame.image.load('images\\main_gui\\bg.jpg').convert_alpha(), (screen.get_width(), screen.get_height()))
+                menu_screen_x = event.w
+                menu_screen_y = event.h
+                screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.RESIZABLE)
+                bg_surf = pygame.transform.scale(bg_surf, (screen.get_width(), screen.get_height()))
                 bg_rect = bg_surf.get_rect(center=(screen.get_width()/2, screen.get_height()/2))
+                font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', int(menu_screen_x/12))
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     pygame.quit()
 
 
         screen.blit(bg_surf, bg_rect)
-        play_button.draw(screen)
-        exit_button.draw(screen)
-        settings_button.draw(screen)
+        play_button.draw()
+        exit_button.draw()
+        settings_button.draw()
 
 
         pygame.display.flip()
         clock.tick(FPS)
 
 
-def main_game_loop(screen):
+def main_game_loop(screen, menu_screen_x, menu_screen_y):
     tiles.spawn_tiles()
     alive = True
     fc = 0
@@ -192,9 +213,11 @@ def main_game_loop(screen):
             for segment in segments:
                 if segment != segments[0]:
                     if get_cell_x(segments[0].get_x()) == get_cell_x(segment.get_x()) and get_cell_y(segments[0].get_y()) == get_cell_y(segment.get_y()):
+                        screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.RESIZABLE)
                         alive = False
                 
             if segments[0].get_x() < cell_width/2 or segments[0].get_x() > screen.get_width() - cell_width/2 or segments[0].get_y() < cell_height/2 or segments[0].get_y() > screen.get_height() - cell_height/2:
+                screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.RESIZABLE)
                 alive = False
 
         if len(segments) == cell_cx*cell_cy:
@@ -217,7 +240,7 @@ def main_game_loop(screen):
         clock.tick(FPS)
 
 if __name__ == "__main__":
-    main_menu(screen, bg_surf, bg_rect)
+    main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y)
     #main_game_loop(screen)
     #spawn_tiles()
 
