@@ -11,7 +11,7 @@ clock = pygame.time.Clock()
 FPS = 60
 
 cell_width, cell_height = 40, 40
-cell_cx, cell_cy = 20, 14
+cell_cx, cell_cy = 6, 5
 
 snake_x, snake_y = cell_width+(cell_width/2), cell_height/2
 scr_x=cell_width*cell_cx ; scr_y=cell_width*cell_cy
@@ -118,32 +118,35 @@ def main_game_loop(screen):
                 if event.key == pygame.K_ESCAPE:
                     alive = False
                 if input_num == 0:
-                    if movement[0][2] != 180 and event.key == pygame.K_w or movement[0][2] != 180 and event.key == pygame.K_UP:
-                        direction_x = 0
-                        direction_y = -1
-                        angle = 0
-
-                        input_num = 1
-                    if movement[0][2] != 0 and event.key == pygame.K_s or movement[0][2] != 0 and event.key == pygame.K_DOWN:
-                        direction_x = 0
-                        direction_y = 1
-                        angle = 180
-
-                        input_num = 1
-                    if movement[0][2] != 90 and event.key == pygame.K_d or movement[0][2] != 90 and event.key == pygame.K_RIGHT:
-                        direction_x = 1
-                        direction_y = 0
-                        angle = 270
-                        input_num = 1
-                    if movement[0][2] != 270 and event.key == pygame.K_a or movement[0][2] != 270 and event.key == pygame.K_LEFT:
-                        direction_x = -1
-                        direction_y = 0
-                        angle = 90
-                        input_num = 1
+                    if event.key == pygame.K_w or event.key == pygame.K_UP:
+                        if movement[0][2] != 180 and movement[0][2] != 0:
+                            direction_x = 0
+                            direction_y = -1
+                            angle = 0
+                            input_num = 1
+                    if event.key == pygame.K_s or event.key == pygame.K_DOWN:
+                        if movement[0][2] != 180 and movement[0][2] != 0:
+                            direction_x = 0
+                            direction_y = 1
+                            angle = 180
+                            input_num = 1
+                    if event.key == pygame.K_d or event.key == pygame.K_RIGHT:
+                        if movement[0][2] != 270 and movement[0][2] != 90:
+                            direction_x = 1
+                            direction_y = 0
+                            angle = 270
+                            input_num = 1
+                    if event.key == pygame.K_a or event.key == pygame.K_LEFT:
+                        if movement[0][2] != 270 and movement[0][2] != 90:
+                            direction_x = -1
+                            direction_y = 0
+                            angle = 90
+                            input_num = 1
+                    
 
         
         
-        if not fc%60:
+        if not fc%20:
             tiles.tile(segments[-2].get_x(), segments[-2].get_y())
             tiles.tile(segments[-1].get_x(), segments[-1].get_y())
             tiles.tile(segments[0].get_x(), segments[0].get_y())
@@ -151,7 +154,6 @@ def main_game_loop(screen):
             movement.insert(0, (direction_x, direction_y, angle))
             if len(movement) > len(segments):
                 movement.pop()
-            print(movement)
             for i in range(len(segments)):
                 if i == len(segments) -1:
                     segments[i].rotate(movement[i-1][2])
@@ -160,7 +162,7 @@ def main_game_loop(screen):
 
                 segments[i].move(cell_width*movement[i][0], cell_height*movement[i][1])
                 for apple in apple_list:
-                    if get_cell_x(segments[i].get_x()) == get_cell_x(apple.get_x()) and get_cell_y(segments[i].get_y()) == get_cell_y(apple.get_y()):#segments[i].collide(apple.get_rect()):
+                    if get_cell_x(segments[i].get_x()) == get_cell_x(apple.get_x()) and get_cell_y(segments[i].get_y()) == get_cell_y(apple.get_y()):
                         new = MySprite(segments[-1].get_x(), segments[-1].get_y(), cell_width, cell_height, snake_body_img, screen)
                         new.rotate(movement[-1][2])
                         segments.append(new)
@@ -169,17 +171,24 @@ def main_game_loop(screen):
 
             for i in range(len(movement)):
                 if i != 0 and len(segments) > 2 and i != len(movement)-1:
-                    if movement[i-1][2] != movement[i+1][2]:
-                        if movement[i+1][2] - movement[i-1][2] == -90:
-                            segments[i].set_frame(3)
-                        elif movement[i-1][2] - movement[i+1][2] == -90:
-                            segments[i].set_frame(2)
+                    if movement[i][2] != movement[i-1][2]:
+                        if movement[i-1][2] - movement[i][2] == -90:
+                            segments[i].set_frame(2) #left
+                        elif movement[i][2] - movement[i-1][2] == -90:
+                            segments[i].set_frame(3) #right
+
+                        elif movement[i-1][2] - movement[i][2] == 270:
+                            segments[i].set_frame(2) #left
+
+                        elif movement[i][2] - movement[i-1][2] == 270:
+                            segments[i].set_frame(3) #right
+
+                            
                     else:
                         segments[i].set_frame(1)
                         
 
 
-                
             for segment in segments:
                 if segment != segments[0]:
                     if get_cell_x(segments[0].get_x()) == get_cell_x(segment.get_x()) and get_cell_y(segments[0].get_y()) == get_cell_y(segment.get_y()):
@@ -188,14 +197,13 @@ def main_game_loop(screen):
             if segments[0].get_x() < cell_width/2 or segments[0].get_x() > screen.get_width() - cell_width/2 or segments[0].get_y() < cell_height/2 or segments[0].get_y() > screen.get_height() - cell_height/2:
                 alive = False
 
-            print(segments)
+        if len(segments) == cell_cx*cell_cy:
+            print("you won")
 
         if len(apple_list) <= 0:
             ax, ay = spawn_apple()
             apple_list.append(MySprite(ax, ay, apple_surf.get_width(), apple_surf.get_height(), apple_images, screen))
             apple_list[-1].set_animation(0, 2, 1, True)
-
-        #screen.fill((0, 0, 0))
 
         
         for apple in apple_list:
