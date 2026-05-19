@@ -6,7 +6,8 @@ from button import Button
 from mysprite import MySprite
 from imagelist import ImageList
 from tilespawn import TileSpawn
-
+import debug
+debug.DEBUG_LEVEL = 1
 
 class Snake():
     def __init__(self, movement, cell_w, cell_h, cell_cx, cell_cy, dir_x, dir_y, angle, screen):
@@ -170,8 +171,7 @@ def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, c
                 pygame.quit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if play_button.pressed(mouse_pos):
-                    main = False
-                    screen = pygame.display.set_mode((scr_x, scr_y), vsync=1)
+                    screen = pygame.display.set_mode((scr_x, scr_y)) #, vsync=1)
                     screen.fill((0, 0, 0))
                     main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy)
                 if exit_button.pressed(mouse_pos):
@@ -179,7 +179,6 @@ def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, c
                     print("bye bye")
                     pygame.quit()
                 if settings_button.pressed(mouse_pos):
-                    main = False
                     settings_menu(settings)
 
                 
@@ -201,7 +200,7 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy):
     tiles.spawn_tiles()
     alive = True
     fc = 0
-    apple_count = 1
+    apple_count = 2
     input_num = 0
     apple_list = []
     movement = [(1, 0, 270)]
@@ -210,6 +209,7 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy):
     apple = Apple(cell_width, cell_height, cell_cx, cell_cy, apple_count)
 
     while alive:
+        apple.spawn_apple()
         input_num = 0
         fc += 1
 
@@ -263,7 +263,6 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy):
 
         for apple in apple_list:
             apple.draw()
-
         snake.draw()
 
         pygame.display.flip()
@@ -348,5 +347,6 @@ if __name__ == "__main__":
     main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, cell_cy, settings)
     #main_game_loop(screen)
     #spawn_tiles()
+    debug.dprint(1, "game quitting")
 
 pygame.quit()
