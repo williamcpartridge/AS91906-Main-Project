@@ -9,16 +9,25 @@ from tilespawn import TileSpawn
 
 
 class Snake():
-    def __init__(self, segments, movement, cell_w, cell_h, dir_x, dir_y, angle, screen):
-        self._segments = segments
+    def __init__(self, movement, cell_w, cell_h, cell_cx, cell_cy, dir_x, dir_y, angle, screen):
         self._movement = movement
         self._cell_w = cell_w
         self._cell_h = cell_h
+        self._cell_cx = cell_cx
+        self._cell_cy = cell_cy
         self._screen = screen
         self._dir_x = dir_x
         self._dir_y = dir_y
         self._angle = angle
         self._add_segment = False
+
+        self._snake_head_img = ImageList("images\\snake\\head\\snake_head", cell_width, cell_height)
+        self._snake_body_img = ImageList("images\\snake\\body\\snake_body", cell_width, cell_height)
+
+        snake_x = self._cell_w+(self._cell_w/2)
+        snake_y = self._cell_h/2
+        self._segments = [MySprite(snake_x, snake_y, self._cell_w, self._cell_h, self._snake_head_img, self._screen, self._angle), \
+                MySprite(snake_x - self._cell_w, snake_y, self._cell_w, self._cell_h, self._snake_body_img, self._screen, self._angle)]
 
     def get_cell_x(self, x):
         return int(x/self._cell_w)
@@ -53,6 +62,10 @@ class Snake():
         return (self.get_dir_x(), self.get_dir_y(), self.get_angle())
 
     def step(self):
+        tiles.tile(self._segments[-2].get_x(), self._segments[-2].get_y())
+        tiles.tile(self._segments[-1].get_x(), self._segments[-1].get_y())
+        tiles.tile(self._segments[0].get_x(), self._segments[0].get_y())
+
         self._movement.insert(0, self.get_movement())
         if len(self._movement) > len(self._segments):
             self._movement.pop()
@@ -72,7 +85,7 @@ class Snake():
     def new_seg(self):
         new = MySprite(self._segments[-1].get_x() - self._movement[-1][0]*self._cell_w, \
                        self._segments[-1].get_y() - self._movement[-1][1]*self._cell_h, \
-                        cell_width, cell_height, snake_body_img, screen)
+                        self._cell_w, self._cell_h, self._snake_body_img, self._screen)
         new.rotate(self._movement[-1][2])
         new.set_frame(0)
         return new
@@ -113,38 +126,61 @@ class Snake():
         for segment in self._segments:
             segment.move(cell_width, 0, 0.1)
 
+    def win_check(self):
+        if len(self._segments) == self._cell_cx*self._cell_cy:
+            return True
+        else:
+            return False
+
     def draw(self):
         for seg in self._segments:
             seg.draw()
 
-def spawn_apple():
-    ax = (cell_width*random.randint(0, cell_cx - 1)) + apple_surf.get_width()/2
-    ay = (cell_height*random.randint(0, cell_cy - 1)) + apple_surf.get_height()/2
-    return (ax, ay)
+class Apple():
+    def __init__(self, cell_w, cell_h, cell_cx, cell_cy, apple_count):
+        self._cell_w = cell_w
+        self._cell_h = cell_h
+        self._cell_cx = cell_cx
+        self._cell_cy = cell_cy
+        self._apple_list = []
+        self._apple_count = apple_count
+
+        self._apple_images = ImageList("images\\apple\\apple", cell_width, cell_height)
 
 
-def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y):
-    font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', int(menu_screen_x/12))
-    
-    while True:
+    def spawn_apple(self):
+        ax = (self._cell_w*random.randint(0, self._cell_cx - 1)) + self._cell_w/2
+        ay = (self._cell_h*random.randint(0, self._cell_cy - 1)) + self._cell_h()/2
+        if len(self._apple_list) < self._apple_count:
+            self._apple_list.append(MySprite(ax, ay, self._cell_w, self._cell_h, self._apple_images, self._screen))
+            self._apple_list[-1].set_animation(0, 2, 1, True)
+
+def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, cell_cy, settings): 
+    main = True
+    while main:
         mouse_pos = pygame.mouse.get_pos()
-        play_button = Button(3, 1, font, 'Play', screen)
+        play_button = Button(count=3, pos_index=1, font=font, text='Play', screen=screen, state="link")
         settings_button = Button(3, 2, font, 'Settings', screen)
         exit_button = Button(3, 3, font, 'Exit', screen)
 
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                main = False
                 pygame.quit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if play_button.pressed(mouse_pos):
+                    main = False
                     screen = pygame.display.set_mode((scr_x, scr_y), vsync=1)
-                    main_game_loop(screen, menu_screen_x, menu_screen_y)
+                    screen.fill((0, 0, 0))
+                    main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy)
                 if exit_button.pressed(mouse_pos):
+                    main = False
                     print("bye bye")
                     pygame.quit()
                 if settings_button.pressed(mouse_pos):
-                    print("Settings")
+                    main = False
+                    settings_menu(settings)
 
                 
             if event.type == pygame.KEYDOWN:
@@ -161,23 +197,17 @@ def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y):
         pygame.display.flip()
         clock.tick(FPS)
 
-
-def main_game_loop(screen, menu_screen_x, menu_screen_y):
+def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy):
     tiles.spawn_tiles()
     alive = True
     fc = 0
-    direction_x = 1
-    direction_y = 0
-    ax = 0
-    ay = 0
+    apple_count = 1
     input_num = 0
     apple_list = []
     movement = [(1, 0, 270)]
-    angle = 270
     eaten = False
-    segments = [MySprite(snake_x, snake_y, cell_width, cell_height, snake_head_img, screen, angle), \
-                MySprite(snake_x - cell_width, snake_y, cell_width, cell_height, snake_body_img, screen, angle)]
-    snake = Snake(segments, movement, cell_width, cell_height, direction_x, direction_y, angle, screen)
+    snake = Snake(movement, cell_width, cell_height, cell_cx, cell_cy, dir_x=1, dir_y=0, angle=270, screen=screen)
+    apple = Apple(cell_width, cell_height, cell_cx, cell_cy, apple_count)
 
     while alive:
         input_num = 0
@@ -186,6 +216,7 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 alive = False
+                pygame.quit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     alive = False
@@ -208,10 +239,6 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y):
                             input_num = 1
         
         if not fc%20:
-            tiles.tile(segments[-2].get_x(), segments[-2].get_y())
-            tiles.tile(segments[-1].get_x(), segments[-1].get_y())
-            tiles.tile(segments[0].get_x(), segments[0].get_y())
-
             if eaten:
                 snake.append_seg(new)
                 eaten = False
@@ -227,16 +254,12 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y):
             snake.check_rotation()       
 
             if snake.death_check():
+                print("pjfjfjf")
                 screen = pygame.display.set_mode((menu_screen_x, menu_screen_y))
                 alive = False
 
-        if len(segments) == cell_cx*cell_cy:
+        if snake.win_check():
             print("you won")
-
-        if len(apple_list) <= 0:
-            ax, ay = spawn_apple()
-            apple_list.append(MySprite(ax, ay, apple_surf.get_width(), apple_surf.get_height(), apple_images, screen))
-            apple_list[-1].set_animation(0, 2, 1, True)
 
         for apple in apple_list:
             apple.draw()
@@ -246,14 +269,53 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y):
         pygame.display.flip()
         clock.tick(FPS)
 
+def settings_menu(settings):
+    settings.read_settings()
+    font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', int(menu_screen_x/20))
+    sizes_button = ["6x5", "10x7", "16x10"]
+    sizes_game = [(6, 5), (10, 7), (16, 10)]
+    index = sizes_game.index(settings.get_size())
+    size = Button(count=2, pos_index=1, font=font, text='size', screen=screen, state="multi", options=sizes_button, index=index)
+    back = Button(count=2, pos_index=2, font=font, text="back", screen=screen, state="link")
+    settings_open = True
+
+    while settings_open:
+        mouse_pos = pygame.mouse.get_pos()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                index = size.pressed(mouse_pos)                
+                if back.pressed(mouse_pos):
+                    settings.size = sizes_game[index]
+                    settings.write_setting()
+                    settings_open = False
+                
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                
+        screen.blit(bg_surf, bg_rect)
+
+        size.draw()
+        back.draw()
+
+        pygame.display.flip()
+        clock.tick(FPS)
+
+
 if __name__ == "__main__":
     pygame.init()
+    settings = Settings(filename="settings.json")
+    cell_cx, cell_cy = settings.get_size()
 
     clock = pygame.time.Clock()
     FPS = 60
 
     cell_width, cell_height = 40, 40
-    cell_cx, cell_cy = 12, 9
+
+
 
     fullscreen = False
 
@@ -266,21 +328,16 @@ if __name__ == "__main__":
             cell_width = pygame.display.Info().current_w / cell_cx
             cell_height = pygame.display.Info().current_w / cell_cx
 
-    snake_x, snake_y = cell_width+(cell_width/2), cell_height/2
     scr_x=cell_width*cell_cx ; scr_y=cell_width*cell_cy
 
     menu_screen_x, menu_screen_y = 1000, 700
 
+    font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', int(menu_screen_x/12))
+
 
     pygame.display.set_caption('Snake game')
 
-    apple_surf = pygame.Surface((cell_width, cell_height))
-
     screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.SCALED | pygame.RESIZABLE, vsync=1)
-    enemy_images = ImageList("images\\enemy\\enemy", 100, 100)
-    apple_images = ImageList("images\\apple\\apple", apple_surf.get_width(), apple_surf.get_height())
-    snake_head_img = ImageList("images\\snake\\head\\snake_head", cell_width, cell_height)
-    snake_body_img = ImageList("images\\snake\\body\\snake_body", cell_width, cell_height)
 
     tiles = TileSpawn(cell_cx, cell_cy, cell_width, cell_height, screen)
 
@@ -288,7 +345,7 @@ if __name__ == "__main__":
     bg_rect = bg_surf.get_rect(center=(screen.get_width()/2, screen.get_height()/2))
 
 
-    main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y)
+    main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, cell_cy, settings)
     #main_game_loop(screen)
     #spawn_tiles()
 

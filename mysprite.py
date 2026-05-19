@@ -147,10 +147,6 @@ class MySprite():
         self._screen.blit(pygame.transform.rotate(self._images.images[self._current_frame], self._angle), self.get_rect())
 
 
-if __name__ == "__main__":
-    pygame.init()
-
-
 # TESTING
 debug.DEBUG_LEVEL = 2
 if __name__ == "__main__":

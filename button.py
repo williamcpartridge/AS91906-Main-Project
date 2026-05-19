@@ -1,24 +1,53 @@
 import pygame
 
 class Button():
-    def __init__(self, count, index, font, text_input, screen):
-        self.x = screen.get_width()/2
-        self.y = (2*index)*(screen.get_height()/(((count+1)*2)))
-        self.screen = screen
-        self.font = font
-        self.text_input = text_input
-        self.text = self.font.render(self.text_input, True, (255, 255, 255))
-        self.text_rect = self.text.get_rect(center=(self.x, self.y))
-        self.bg_surface = pygame.Surface((self.text_rect.width + 35, self.text_rect.height + 20), pygame.SRCALPHA)
-        self.bg_rect = self.bg_surface.get_rect(center=(self.x, self.y))
-        self.bg_surface.fill((200, 200, 200, 150))
+    def __init__(self, count, pos_index, font, text, screen, state="link", options=None, index=0):
+        self._x = screen.get_width()/2
+        self._y = (2*pos_index)*(screen.get_height()/(((count+1)*2)))
+        self._screen = screen
+        self._font = font
+        self._text_input = text
+
+        self._state = state
+        self._index = index
+        if options != None:
+            self._options = options
+        if self._state == "link":
+            self.link()
+        if self._state == "multi":
+            self.multi()
+
+    def link(self):
+        self._text = self._font.render(self._text_input, True, (255, 255, 255))
+        self._text_rect = self._text.get_rect(center=(self._x, self._y))
+        self._bg_surface = pygame.Surface((self._text_rect.width + 35, self._text_rect.height + 20), pygame.SRCALPHA)
+        self._bg_rect = self._bg_surface.get_rect(center=(self._x, self._y))
+        self._bg_surface.fill((200, 200, 200, 150))
+
+    def multi(self):
+        self._text = self._font.render(f"{self._text_input}: {self._options[self._index]}", True, (255, 255, 255))
+        self._text_rect = self._text.get_rect(center=(self._x, self._y))
+        self._bg_surface = pygame.Surface((self._text_rect.width + 35, self._text_rect.height + 20), pygame.SRCALPHA)
+        self._bg_rect = self._bg_surface.get_rect(center=(self._x, self._y))
+        self._bg_surface.fill((200, 200, 200, 150))
 
     def draw(self):
-        self.screen.blit(self.bg_surface, self.bg_rect)
-        self.screen.blit(self.text, self.text_rect)
+        self._screen.blit(self._bg_surface, self._bg_rect)
+        self._screen.blit(self._text, self._text_rect)
 
     def pressed(self, position):
-        if position[0] in range(self.bg_rect.left, self.bg_rect.right) and position[1] in range(self.bg_rect.top, self.bg_rect.bottom):
-            return True
-        else:
-            return False
+        if self._state == "link":
+            if position[0] in range(self._bg_rect.left, self._bg_rect.right) and position[1] in range(self._bg_rect.top, self._bg_rect.bottom):
+                return True
+            else:
+                return False
+        elif self._state == "multi":
+            if position[0] in range(self._bg_rect.left, self._bg_rect.right) and position[1] in range(self._bg_rect.top, self._bg_rect.bottom):
+                if self._index < len(self._options) - 1:
+                    self._index += 1
+                else:
+                    self._index = 0
+                self.multi()
+                return self._index
+            else:
+                return self._index

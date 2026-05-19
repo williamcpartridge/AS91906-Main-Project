@@ -57,6 +57,23 @@ if __name__ == "__main__":
     TEST_CW = 40
     TEST_CH = 40
 
+    running = True
+
     screen = pygame.display.set_mode((TEST_CW*TEST_CX, TEST_CH*TEST_CY), pygame.RESIZABLE)
 
     tiles = TileSpawn(TEST_CX, TEST_CY, TEST_CW, TEST_CH, screen)
+    tiles.spawn_tiles()
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+        
+
+
+        pygame.display.flip()
+
+
+
+    pygame.quit()
+    quit()

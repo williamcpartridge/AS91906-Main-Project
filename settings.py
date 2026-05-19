@@ -4,8 +4,8 @@ from os.path import exists
 DEFAULTS = {
     "brightness": 100,
     "fullscreen": False,
-    "volume": 100
-
+    "volume": 100,
+    "size": (10, 7)
 }
 
 TEST_FILENAME = "test.json"
@@ -13,12 +13,14 @@ MIN_BRIGHTNESS = 0
 MAX_BRIGHTNESS = 200
 MIN_VOLUME = 0
 MAX_VOLUME = 100
+MAX_SIZE = (100, 100)
+MIN_SIZE = (5, 5)
 
 
 
 class Settings():
     # initialization:
-    def __init__ (self, filename): 
+    def __init__ (self, filename, reset=False): 
         self._filename = filename
         self._settings = DEFAULTS
         self.read_settings()
@@ -33,6 +35,7 @@ class Settings():
         with open(filename, 'w') as f:
             json.dump(obj, f)
             print("Data written successfully")
+            print(obj)
 
     def read_settings(self):
         result = self.json_read(self._filename, self._settings)
@@ -44,6 +47,7 @@ class Settings():
             obj = json.load(f)
             print("Data read successfully:")
             print(obj)
+            return obj
 
 
     # brightness:
@@ -51,7 +55,6 @@ class Settings():
         return self._settings["brightness"] # get brightness setting
 
     def set_brightness(self, brightness):
-        print("set")
         #clamp to mix / max brightness
         if brightness < MIN_BRIGHTNESS:
             self._settings["brightness"] = MIN_BRIGHTNESS
@@ -60,7 +63,7 @@ class Settings():
         else:
             self._settings["brightness"] = brightness # set brightness
 
-    brightness = property(get_brightness, set_brightness) # property shortcut for brightness
+    brightness = property(get_brightness, set_brightness, write_setting) # property shortcut for brightness
 
 
     # fullscreen:
@@ -70,7 +73,7 @@ class Settings():
     def set_fullscreen(self, fullscreen):
         self._settings["fullscreen"] = fullscreen # set fullscreen
 
-    fullscreen = property(get_fullscreen, set_fullscreen) # property shortcut for fullscreen
+    fullscreen = property(get_fullscreen, set_fullscreen, write_setting) # property shortcut for fullscreen
 
 
     # volume:
@@ -87,9 +90,26 @@ class Settings():
 
     volume = property(get_volume, set_volume, write_setting) # property shortcut for volume
 
+    def get_size(self):
+        return self._settings["size"]
+    
+    def set_size(self, size):
+        if size < MIN_SIZE:
+            self._settings["size"] = MIN_SIZE
+        elif size > MAX_SIZE:
+            self._settings["size"] = MAX_SIZE
+        else:
+            self._settings["size"] = size
+
+    size = property(get_size, set_size, write_setting)
+
+
 
 if __name__ == "__main__":
-    my_settings = Settings(TEST_FILENAME)
+    my_settings = Settings(TEST_FILENAME, True)
+    my_settings.write_setting
     my_settings.brightness = 50
     my_settings.fullscreen = True
     my_settings.read_settings
+
+    #settings = Settings("settings.json", True)
