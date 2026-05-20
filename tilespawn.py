@@ -20,7 +20,9 @@ class TileSpawn():
         self._DARK_GREEN = ((127, 173, 22))
 
 
-    def spawn_tiles(self):
+    def spawn_tiles(self, cell_cx, cell_cy):
+        self._cell_count_x = cell_cx
+        self._cell_count_y = cell_cy
         for x in range(self._cell_count_x):
             for y in range(self._cell_count_y):
                 if y % 2 == 0:
@@ -67,9 +69,6 @@ if __name__ == "__main__":
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-
-        
-
 
         pygame.display.flip()
 

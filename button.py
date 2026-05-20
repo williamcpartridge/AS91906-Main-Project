@@ -48,6 +48,4 @@ class Button():
                 else:
                     self._index = 0
                 self.multi()
-                return self._index
-            else:
-                return self._index
+            return self._index
