@@ -5,7 +5,9 @@ DEFAULTS = {
     "brightness": 100,
     "fullscreen": False,
     "volume": 100,
-    "size": (10, 7)
+    "size": (10, 7),
+    "speed": 20,
+    "apple count": 1
 }
 
 TEST_FILENAME = "test.json"
@@ -15,6 +17,10 @@ MIN_VOLUME = 0
 MAX_VOLUME = 100
 MAX_SIZE = (100, 100)
 MIN_SIZE = (5, 5)
+MAX_SPEED = 60
+MIN_SPEED = 5
+MAX_APPLES = 10
+MIN_APPLES = 1
 
 
 
@@ -102,6 +108,32 @@ class Settings():
             self._settings["size"] = size
 
     size = property(get_size, set_size, write_setting)
+
+    def get_speed(self):
+        return self._settings["speed"]
+    
+    def set_speed(self, speed):
+        if speed < MIN_SPEED:
+            self._settings["speed"] = MIN_SPEED
+        elif speed > MAX_SPEED:
+            self._settings["speed"] = MAX_SPEED
+        else:
+            self._settings["speed"] = speed
+
+    speed = property(get_speed, set_speed, write_setting)
+
+    def get_apple_count(self):
+        return self._settings["apple count"]
+    
+    def set_apple_count(self, apples):
+        if apples < MIN_APPLES:
+            self._settings["apple count"] = MIN_APPLES
+        elif apples > MAX_APPLES:
+            self._settings["apple count"] = MAX_APPLES
+        else:
+            self._settings["apple count"] = apples
+
+    apples = property(get_apple_count, set_apple_count, write_setting)
 
 
 

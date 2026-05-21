@@ -241,11 +241,12 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy):
     tiles.spawn_tiles(cell_cx, cell_cy)
     alive = True
     fc = 0
-    apple_count = 5
+    apple_count = settings.get_apple_count()
     input_num = 0
     movement = [(1, 0, 270)]
     eaten = False
     (cell_cx, cell_cy) = settings.get_size()
+    speed = settings.get_speed()
     snake = Snake(movement, cell_width, cell_height, cell_cx, cell_cy, dir_x=1, dir_y=0, angle=270, screen=screen)
     apple = Apple(cell_width, cell_height, cell_cx, cell_cy, apple_count, screen)
     font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
@@ -283,7 +284,7 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy):
                             snake.set_movement(-1, 0, 90)
                             input_num = 1
         
-        if not fc%20:
+        if not fc%speed:
             if eaten:
                 snake.append_seg(new)
                 eaten = False
@@ -309,7 +310,8 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy):
             print("you won")
 
 
-        
+        tiles.tile(screen.get_width()/2, 0)
+        tiles.tile((screen.get_width()/2)-1, 0)
         snake.draw()
         apple.draw()
         screen.blit(font.render(str(score), True, (0, 0, 0)), score_rect)
@@ -322,9 +324,18 @@ def settings_menu(settings):
     font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', int(menu_screen_x/20))
     sizes_button = ["6x5", "10x7", "16x10"]
     sizes_game = [(6, 5), (10, 7), (16, 10)]
-    index = sizes_game.index(settings.get_size())
-    size = Button(count=2, pos_index=1, font=font, text='size', screen=screen, state="multi", options=sizes_button, index=index)
-    back = Button(count=2, pos_index=2, font=font, text="back", screen=screen, state="link")
+    speed_button = ["slow", "medium", "fast"]
+    speed_game = [30, 20, 10]
+    apples_button = ["1", "3", "5", "10"]
+    apples_game = [1, 3, 5, 10]
+
+    size_index = sizes_game.index(settings.get_size())
+    speed_index = speed_game.index(settings.get_speed())
+    apple_index = apples_game.index(settings.get_apple_count())
+    size = Button(count=4, pos_index=1, font=font, text='size', screen=screen, state="multi", options=sizes_button, index=size_index)
+    speed = Button(count=4, pos_index=2, font=font, text="Speed", screen=screen, state="multi", options=speed_button, index=speed_index)
+    apples = Button(count=4, pos_index=3, font=font, text="Apple count", screen=screen, state="multi", options=apples_button, index=apple_index)
+    back = Button(count=4, pos_index=4, font=font, text="back", screen=screen, state="link")
     settings_open = True
 
     while settings_open:
@@ -334,9 +345,13 @@ def settings_menu(settings):
             if event.type == pygame.QUIT:
                 pygame.quit()
             if event.type == pygame.MOUSEBUTTONDOWN:
-                index = size.pressed(mouse_pos)
+                size_index = size.pressed(mouse_pos)
+                speed_index = speed.pressed(mouse_pos)
+                apples_index = apples.pressed(mouse_pos)
                 if back.pressed(mouse_pos):
-                    settings.size = sizes_game[index]
+                    settings.size = sizes_game[size_index]
+                    settings.speed = speed_game[speed_index]
+                    settings.apples = apples_game[apples_index]
                     settings.write_setting()
                     settings_open = False
                 
@@ -347,6 +362,8 @@ def settings_menu(settings):
         screen.blit(bg_surf, bg_rect)
 
         size.draw()
+        speed.draw()
+        apples.draw()
         back.draw()
 
         pygame.display.flip()

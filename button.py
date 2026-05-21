@@ -1,9 +1,17 @@
 import pygame
 
 class Button():
-    def __init__(self, count, pos_index, font, text, screen, state="link", options=None, index=0):
-        self._x = screen.get_width()/2
-        self._y = (2*pos_index)*(screen.get_height()/(((count+1)*2)))
+    def __init__(self, x=None, y=None, count=None, pos_index=None, font=None, text=None, screen=None, state="link", options=None, index=0):
+        if count != None:
+            self._x = screen.get_width()/2
+            self._y = (2*pos_index)*(screen.get_height()/(((count+1)*2)))
+        elif x != None and y != None:
+            self._x = x
+            self._y = y
+        else:
+            print("NO POSITION SET!\n   DEFULT SET: (0, 0)")
+            self._x = 0
+            self._y = 0
         self._screen = screen
         self._font = font
         self._text_input = text
