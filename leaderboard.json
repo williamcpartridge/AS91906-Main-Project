@@ -1,11 +1,18 @@
 {
     "small": {
-        "willza": 28
+        "willza": 28,
+        "soph": 16,
+        "julzy": 5
     },
     "medium": {
-        "willza": 68
+        "willza": 68,
+        "julzy": 10,
+        "eli": 7,
+        "soph": 4,
+        "dom": 1
     },
     "large": {
-        "willza": 174
+        "willza": 174,
+        "soph": 89
     }
 }
