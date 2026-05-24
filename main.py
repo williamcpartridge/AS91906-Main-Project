@@ -196,15 +196,16 @@ class Apple():
     def rm(self, apple):
         self._apple_list.remove(self._apple_list[apple])
 
-import json
-
 class LeaderBoard():
-    def __init__(self, filename):
+    def __init__(self, filename, screen):
         self._filename = filename
         self._leaderboard = {}
         self.read_leaderboard()
+        self._username = None
+        self._screen = screen
 
-    def write_leaderboard(self, player, score, size):
+    def write_leaderboard(self, username, score, size):
+        
         if size == (6, 5):
             size = "small"
         elif size == (10, 7):
@@ -213,17 +214,23 @@ class LeaderBoard():
             size = "large"
         else:
             size = "custom"
-
-        self._leaderboard[size][player] = score
-        self.write_json(self._filename, self._leaderboard)
+        
+        if self._username == None:
+            self.get_username()
+        if self._username in self._leaderboard[size]:     
+            if score > self._leaderboard[size][self._username]:
+                self._leaderboard[size][self._username] = score
+                self.write_json(self._filename, self._leaderboard)
+        else:
+            self._leaderboard[size][self._username] = score
+            self.write_json(self._filename, self._leaderboard)
+            
 
     def write_json(self, filename, obj):
         sorted_obj = {}
 
         for size, board in obj.items():
-            sorted_obj[size] = dict(
-                sorted(board.items(), key=lambda item: item[1], reverse=True)
-            )
+            sorted_obj[size] = dict(sorted(board.items(), key=lambda item: item[1], reverse=True))
 
         with open(filename, 'w') as f:
             json.dump(sorted_obj, f, indent=4)
@@ -244,6 +251,33 @@ class LeaderBoard():
         except FileNotFoundError:
             print("No leaderboard file found, creating new one.")
             return {}
+        
+    def get_username(self):
+        running = True
+        name = ""
+        font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
+        surf = pygame.Surface((200, 50), pygame.SRCALPHA)
+        surf.fill((255, 255, 255, 180))
+        rect = pygame.Rect((self._screen.get_width()/2)-100, (self._screen.get_height()/2)-50, 200, 50)
+        text = font.render(name, True, (0, 0, 0))
+        text_rect = text.get_rect(center=rect.center)
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key not in EXC:
+                        name = f"{name}{pygame.key.name(event.key)}"
+                    elif event.key == pygame.K_BACKSPACE:
+                        name = name[:-1]
+                    elif event.key == pygame.K_RETURN:
+                        running = False
+                        self._username = name
+                    
+
+            tiles.spawn_tiles(cell_cx, cell_cy)
+            text = font.render(name, True, (0, 0, 0))
+            self._screen.blit(surf, rect)
+            self._screen.blit(text, text_rect)
+            pygame.display.flip()
 
 def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, cell_cy, settings, player):
     play_button = Button(count=3, pos_index=1, font=font, text='Play', screen=screen, state="link")
@@ -290,7 +324,7 @@ def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, c
         pygame.display.flip()
         clock.tick(FPS)
 
-def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, player):
+def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, username):
 
     tiles.spawn_tiles(cell_cx, cell_cy)
     alive = True
@@ -356,10 +390,7 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, playe
             snake.check_rotation()       
 
             if snake.death_check():
-                print("pjfjfjf")
-                if player == None:
-                    player = input("username: ")
-                leaderboard.write_leaderboard(player, score, settings.get_size())
+                leaderboard.write_leaderboard(username, score, settings.get_size())
                 screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.FULLSCREEN | pygame.SCALED)
                 alive = False
 
@@ -491,11 +522,43 @@ if __name__ == "__main__":
     clock = pygame.time.Clock()
     FPS = 60
 
-    player = None
+    username = None
+
+    EXC = [
+        pygame.K_ESCAPE,
+        pygame.K_LSHIFT,
+        pygame.K_RSHIFT,
+        pygame.K_LCTRL,
+        pygame.K_RCTRL,
+        pygame.K_BACKSPACE,
+        pygame.K_LALT,
+        pygame.K_RALT,
+        pygame.K_TAB,
+        pygame.K_F1,
+        pygame.K_F2,
+        pygame.K_F3,
+        pygame.K_F4,
+        pygame.K_F5,
+        pygame.K_F6,
+        pygame.K_F7,
+        pygame.K_F8,
+        pygame.K_F9,
+        pygame.K_F10,
+        pygame.K_F11,
+        pygame.K_F12,
+        pygame.K_RETURN,
+        pygame.K_UP,
+        pygame.K_LEFT,
+        pygame.K_RIGHT,
+        pygame.K_DOWN,
+        pygame.K_CAPSLOCK,
+        pygame.K_LMETA,
+        pygame.K_SPACE,
+    ]
 
     cell_width, cell_height = 40, 40
 
-    leaderboard = LeaderBoard("leaderboard.json")
+
 
     fullscreen = False
 
@@ -521,14 +584,14 @@ if __name__ == "__main__":
     screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.FULLSCREEN | pygame.SCALED)
     #screen = pygame.display.set_mode((pygame.display.Info().current_w, pygame.display.Info().current_h), pygame.SCALED)
     #screen = pygame.display.set_mode((cell_cx*cell_width, cell_cy*cell_height), pygame.SCALED)
-
+    leaderboard = LeaderBoard("leaderboard.json", screen)
     tiles = TileSpawn(cell_cx, cell_cy, cell_width, cell_height, screen)
 
     bg_surf = pygame.transform.scale(pygame.image.load('images\\main_gui\\bg.jpg').convert_alpha(), (screen.get_width(), screen.get_height()))
     bg_rect = bg_surf.get_rect(center=(screen.get_width()/2, screen.get_height()/2))
 
 
-    main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, cell_cy, settings, player)
+    main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, cell_cy, settings, username)
     #main_game_loop(screen)
     #spawn_tiles()
     debug.dprint(1, "game quitting")
