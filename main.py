@@ -6,6 +6,7 @@ from button import Button
 from mysprite import MySprite
 from imagelist import ImageList
 from tilespawn import TileSpawn
+import json
 import debug
 debug.DEBUG_LEVEL = 1
 
@@ -195,15 +196,64 @@ class Apple():
     def rm(self, apple):
         self._apple_list.remove(self._apple_list[apple])
 
-def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, cell_cy, settings): 
+import json
+
+class LeaderBoard():
+    def __init__(self, filename):
+        self._filename = filename
+        self._leaderboard = {}
+        self.read_leaderboard()
+
+    def write_leaderboard(self, player, score, size):
+        if size == (6, 5):
+            size = "small"
+        elif size == (10, 7):
+            size = "medium"
+        elif size == (16, 11):
+            size = "large"
+        else:
+            size = "custom"
+
+        self._leaderboard[size][player] = score
+        self.write_json(self._filename, self._leaderboard)
+
+    def write_json(self, filename, obj):
+        sorted_obj = {}
+
+        for size, board in obj.items():
+            sorted_obj[size] = dict(
+                sorted(board.items(), key=lambda item: item[1], reverse=True)
+            )
+
+        with open(filename, 'w') as f:
+            json.dump(sorted_obj, f, indent=4)
+
+        print("Data written successfully")
+        print(sorted_obj)
+
+    def read_leaderboard(self):
+        self._leaderboard = self.json_read(self._filename)
+
+    def json_read(self, filename):
+        try:
+            with open(filename, 'r') as f:
+                data = json.load(f)
+                print("Data read successfully:")
+                print(data)
+                return data
+        except FileNotFoundError:
+            print("No leaderboard file found, creating new one.")
+            return {}
+
+def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, cell_cy, settings, player):
+    play_button = Button(count=3, pos_index=1, font=font, text='Play', screen=screen, state="link")
+    settings_button = Button(count=3, pos_index=2, font=font, text='Settings', screen=screen, state="link")
+    leaderboard_button = Button(x=170, y=40, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20), text="Leader Board", screen=screen, state="link")
+    exit_button = Button(count=3, pos_index=3, font=font, text='Exit', screen=screen, state="link")
+
     main = True
     while main:
         mouse_pos = pygame.mouse.get_pos()
-        play_button = Button(count=3, pos_index=1, font=font, text='Play', screen=screen, state="link")
-        settings_button = Button(3, 2, font, 'Settings', screen)
-        exit_button = Button(3, 3, font, 'Exit', screen)
-
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 main = False
@@ -212,15 +262,18 @@ def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, c
                 if play_button.pressed(mouse_pos):
                     (cell_cx, cell_cy) = settings.get_size()
 
-                    screen = pygame.display.set_mode((cell_cx*cell_width, cell_cy*cell_height))
+                    screen = pygame.display.set_mode((cell_cx*cell_width, cell_cy*cell_height), pygame.FULLSCREEN | pygame.SCALED)
                     screen.fill((0, 0, 0))
-                    main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy)
+                    main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, player)
                 if exit_button.pressed(mouse_pos):
                     main = False
                     print("bye bye")
                     pygame.quit()
                 if settings_button.pressed(mouse_pos):
                     settings_menu(settings)
+                if leaderboard_button.pressed(mouse_pos):
+                    leaderboard.read_leaderboard()
+                    leaderboard_menu(screen, leaderboard)
 
                 
             if event.type == pygame.KEYDOWN:
@@ -230,14 +283,15 @@ def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, c
 
         screen.blit(bg_surf, bg_rect)
         play_button.draw()
+        leaderboard_button.draw()
         exit_button.draw()
         settings_button.draw()
-
 
         pygame.display.flip()
         clock.tick(FPS)
 
-def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy):
+def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, player):
+
     tiles.spawn_tiles(cell_cx, cell_cy)
     alive = True
     fc = 0
@@ -303,11 +357,14 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy):
 
             if snake.death_check():
                 print("pjfjfjf")
-                screen = pygame.display.set_mode((menu_screen_x, menu_screen_y))
+                if player == None:
+                    player = input("username: ")
+                leaderboard.write_leaderboard(player, score, settings.get_size())
+                screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.FULLSCREEN | pygame.SCALED)
                 alive = False
 
         if snake.win_check():
-            print("you won")
+            print("you win")
 
 
         tiles.tile(screen.get_width()/2, 0)
@@ -322,8 +379,8 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy):
 def settings_menu(settings):
     settings.read_settings()
     font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', int(menu_screen_x/20))
-    sizes_button = ["6x5", "10x7", "16x10"]
-    sizes_game = [(6, 5), (10, 7), (16, 10)]
+    sizes_button = ["Small", "Medium", "Large"]
+    sizes_game = [(6, 5), (10, 7), (16, 11)]
     speed_button = ["slow", "medium", "fast"]
     speed_game = [30, 20, 10]
     apples_button = ["1", "3", "5", "10"]
@@ -369,8 +426,64 @@ def settings_menu(settings):
         pygame.display.flip()
         clock.tick(FPS)
 
+def leaderboard_menu(screen, leaderboard_obj):
+    font_title = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 40)
+    font_text = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 25)
+    font_text_small = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 18)
+    font_back = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 30)
+
+    back_button = Button(y=screen.get_height()-70, x=screen.get_width()/2, pos_index=1, font=font_back, text="Back", screen=screen, state="link")
+
+    running = True
+    while running:
+        mouse_pos = pygame.mouse.get_pos()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if back_button.pressed(mouse_pos):
+                    running = False
+
+        screen.fill((20, 20, 20))
+
+        title = font_title.render("LEADERBOARD", True, (255, 255, 255))
+        screen.blit(title, (screen.get_width()//2 - title.get_width()//2, 20))
+
+        y_offset = 120
+        x_offset = 0
+
+        data = leaderboard_obj._leaderboard
+
+        if not data:
+            empty = font_text.render("No scores yet", True, (200, 200, 200))
+            screen.blit(empty, (screen.get_width()//2 - empty.get_width()//2, y_offset))
+
+        else:
+            for size in ["small", "medium", "large", "custom"]:
+                if size in data:
+                    header = font_text.render(size.upper(), True, (255, 200, 100))
+                    screen.blit(header, (60+x_offset, y_offset))
+                    y_offset += 40
+
+                    for i, (player, score) in enumerate(data[size].items()):
+                        text = font_text_small.render(f"{i+1}. {player} - {score}", True, (255, 255, 255))
+                        screen.blit(text, (80+x_offset, y_offset))
+                        y_offset += 30
+
+                    y_offset = 120
+                    x_offset += 320
+
+        back_button.update(mouse_pos)
+        back_button.draw()
+
+        pygame.display.flip()
+        clock.tick(FPS)
 
 if __name__ == "__main__":
+    os.environ['SDL_VIDEO_WINDOW_POS'] = "0,30"
     pygame.init()
     settings = Settings(filename="settings.json")
     cell_cx, cell_cy = settings.get_size()
@@ -378,9 +491,11 @@ if __name__ == "__main__":
     clock = pygame.time.Clock()
     FPS = 60
 
+    player = None
+
     cell_width, cell_height = 40, 40
 
-
+    leaderboard = LeaderBoard("leaderboard.json")
 
     fullscreen = False
 
@@ -397,12 +512,15 @@ if __name__ == "__main__":
 
     menu_screen_x, menu_screen_y = 1000, 700
 
-    font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', int(menu_screen_x/12))
+    font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 75)
 
 
     pygame.display.set_caption('Snake game')
 
-    screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.SCALED | pygame.RESIZABLE, vsync=1)
+    
+    screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.FULLSCREEN | pygame.SCALED)
+    #screen = pygame.display.set_mode((pygame.display.Info().current_w, pygame.display.Info().current_h), pygame.SCALED)
+    #screen = pygame.display.set_mode((cell_cx*cell_width, cell_cy*cell_height), pygame.SCALED)
 
     tiles = TileSpawn(cell_cx, cell_cy, cell_width, cell_height, screen)
 
@@ -410,7 +528,7 @@ if __name__ == "__main__":
     bg_rect = bg_surf.get_rect(center=(screen.get_width()/2, screen.get_height()/2))
 
 
-    main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, cell_cy, settings)
+    main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, cell_cy, settings, player)
     #main_game_loop(screen)
     #spawn_tiles()
     debug.dprint(1, "game quitting")
