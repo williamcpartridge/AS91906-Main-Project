@@ -8,7 +8,7 @@ from imagelist import ImageList
 from tilespawn import TileSpawn
 import json
 import debug
-debug.DEBUG_LEVEL = 1
+debug.DEBUG_LEVEL = 0
 
 class Snake():
     def __init__(self, movement, cell_w, cell_h, cell_cx, cell_cy, dir_x, dir_y, angle, screen):
@@ -158,11 +158,13 @@ class Apple():
         self._apple_count = apple_count
         self._screen = screen
         self._apple_images = ImageList("images\\apple\\apple", cell_width, cell_height)
+        self._upgrades = {"Golden Apple": True}
 
 
     def spawn_apple(self, snake_cells):
         if len(self._apple_list) < self._apple_count and ((self._cell_cx*self._cell_cy) - len(snake_cells)) > self._apple_count:
             done = False
+            self.apple_type()
             while not done:
                 cell_x = random.randint(0, self._cell_cx - 1) 
                 cell_y = random.randint(0, self._cell_cy - 1)
@@ -185,6 +187,18 @@ class Apple():
             self._apple_list.append(MySprite(ax, ay, self._cell_w, self._cell_h, self._apple_images, self._screen))
             self._apple_list[-1].set_animation(0, 2, 1, True)
     
+    def apple_type(self):
+        type = ""
+        for upgrade in self._upgrades.keys():
+            if self._upgrades[upgrade] == True:
+                rand = random.randint(1, 5)
+                if rand == 5:
+                    type = upgrade
+                else:
+                    type = "normal"
+            else:
+                type = "normal"
+        print(type)
     
     def draw(self):
         for apple in self._apple_list:
@@ -223,8 +237,7 @@ class LeaderBoard():
                 self.write_json(self._filename, self._leaderboard)
         else:
             self._leaderboard[size][self._username] = score
-            self.write_json(self._filename, self._leaderboard)
-            
+            self.write_json(self._filename, self._leaderboard)         
 
     def write_json(self, filename, obj):
         sorted_obj = {}
@@ -235,8 +248,8 @@ class LeaderBoard():
         with open(filename, 'w') as f:
             json.dump(sorted_obj, f, indent=4)
 
-        print("Data written successfully")
-        print(sorted_obj)
+        debug.dprint(1, "Data written successfully")
+        debug.dprint(1, sorted_obj)
 
     def read_leaderboard(self):
         self._leaderboard = self.json_read(self._filename)
@@ -245,8 +258,8 @@ class LeaderBoard():
         try:
             with open(filename, 'r') as f:
                 data = json.load(f)
-                print("Data read successfully:")
-                print(data)
+                debug.dprint(1, "Data read successfully:")
+                debug.dprint(1, data)
                 return data
         except FileNotFoundError:
             print("No leaderboard file found, creating new one.")
@@ -556,9 +569,9 @@ if __name__ == "__main__":
         pygame.K_SPACE,
     ]
 
+    UPGRADES = {"Golden Apple": False}
+
     cell_width, cell_height = 40, 40
-
-
 
     fullscreen = False
 

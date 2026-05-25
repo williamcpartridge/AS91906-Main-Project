@@ -1,5 +1,7 @@
 import json
 from os.path import exists
+import debug
+debug.DEBUG_LEVEL = 0
 
 DEFAULTS = {
     "brightness": 100,
@@ -40,8 +42,8 @@ class Settings():
     def write_json(self, filename, obj):
         with open(filename, 'w') as f:
             json.dump(obj, f)
-            print("Data written successfully")
-            print(obj)
+            debug.dprint(1, "Data written successfully")
+            debug.dprint(1, obj)
 
     def read_settings(self):
         result = self.json_read(self._filename, self._settings)
@@ -51,8 +53,8 @@ class Settings():
     def json_read(self, filename, obj):
         with open(filename, 'r') as f:
             obj = json.load(f)
-            print("Data read successfully:")
-            print(obj)
+            debug.dprint(1, "Data read successfully:")
+            debug.dprint(1, obj)
             return obj
 
 
