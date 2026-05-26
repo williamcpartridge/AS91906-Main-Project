@@ -9,7 +9,7 @@ class ImageList():
         while exists(filename+str(count)+'.png'):
             image = pygame.image.load(filename+str(count)+'.png')
             aspectratio = image.get_width() / image.get_height()
-            scaled = pygame.transform.scale(image, [width, width / aspectratio])
+            scaled = pygame.transform.scale(image, [width, height])
             self._images.append(scaled)
             count += 1
 

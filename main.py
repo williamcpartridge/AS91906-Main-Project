@@ -158,19 +158,19 @@ class Apple():
         self._apple_count = apple_count
         self._screen = screen
         self._apple_images = ImageList("images\\apple\\apple", cell_width, cell_height)
-        self._upgrades = {"Golden Apple": True}
+        print(self._apple_images)
+        self._upgrades = {"Golden": True}
+        self._type_list = []
 
 
     def spawn_apple(self, snake_cells):
         if len(self._apple_list) < self._apple_count and ((self._cell_cx*self._cell_cy) - len(snake_cells)) > self._apple_count:
             done = False
-            self.apple_type()
             while not done:
                 cell_x = random.randint(0, self._cell_cx - 1) 
                 cell_y = random.randint(0, self._cell_cy - 1)
                 done = True
             
-                print((cell_x, cell_y), snake_cells)
                 if (cell_x, cell_y) in snake_cells:
                     done = False
 
@@ -185,24 +185,26 @@ class Apple():
             ax = cell_x * self._cell_w + self._cell_w / 2
             ay = cell_y * self._cell_h + self._cell_h / 2
             self._apple_list.append(MySprite(ax, ay, self._cell_w, self._cell_h, self._apple_images, self._screen))
-            self._apple_list[-1].set_animation(0, 2, 1, True)
-    
+            self._type_list.append(self.apple_type())
+            print(self._type_list)
+
+            #self._apple_list[-1].set_animation(0, 1, 1, False)
+
     def apple_type(self):
-        type = ""
         for upgrade in self._upgrades.keys():
-            if self._upgrades[upgrade] == True:
-                rand = random.randint(1, 5)
-                if rand == 5:
-                    type = upgrade
-                else:
-                    type = "normal"
-            else:
-                type = "normal"
-        print(type)
+            if self._upgrades[upgrade]:
+                if random.randint(1, 5) == 5:
+                    return upgrade
+        return "Normal"
     
     def draw(self):
-        for apple in self._apple_list:
-            apple.draw()
+        for i in range(len(self._apple_list)):
+            if self._type_list[i] == "Normal":
+                self._apple_list[i].set_frame(0)
+            elif self._type_list[i] == "Golden":
+                self._apple_list[i].set_frame(1)
+            #self._apple_list[i].animate()
+            self._apple_list[i].draw()
 
     def get_apples(self):
         return self._apple_list
