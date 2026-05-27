@@ -159,7 +159,7 @@ class Apple():
         self._screen = screen
         self._apple_images = ImageList("images\\apple\\apple", cell_width, cell_height)
         print(self._apple_images)
-        self._upgrades = {"Golden": True}
+        self._upgrades = {"Golden": (True, 1), "Boost": (True, 2)}
         self._type_list = []
 
 
@@ -186,7 +186,6 @@ class Apple():
             ay = cell_y * self._cell_h + self._cell_h / 2
             self._apple_list.append(MySprite(ax, ay, self._cell_w, self._cell_h, self._apple_images, self._screen))
             self._type_list.append(self.apple_type())
-            print(self._type_list)
 
             #self._apple_list[-1].set_animation(0, 1, 1, False)
 
@@ -194,6 +193,7 @@ class Apple():
         for upgrade in self._upgrades.keys():
             if self._upgrades[upgrade]:
                 if random.randint(1, 5) == 5:
+                    print(upgrade)
                     return upgrade
         return "Normal"
     
@@ -201,10 +201,12 @@ class Apple():
         for i in range(len(self._apple_list)):
             if self._type_list[i] == "Normal":
                 self._apple_list[i].set_frame(0)
-            elif self._type_list[i] == "Golden":
-                self._apple_list[i].set_frame(1)
+            else:
+                self._apple_list[i].set_frame(self._upgrades[self._type_list[i]][1])
+                print(self._upgrades[self._type_list[i]][1])
             #self._apple_list[i].animate()
             self._apple_list[i].draw()
+            
 
     def get_apples(self):
         return self._apple_list
@@ -220,7 +222,7 @@ class LeaderBoard():
         self._username = None
         self._screen = screen
 
-    def write_leaderboard(self, username, score, size):
+    def write_leaderboard(self, score, size):
         
         if size == (6, 5):
             size = "small"
@@ -233,13 +235,14 @@ class LeaderBoard():
         
         if self._username == None:
             self.get_username()
-        if self._username in self._leaderboard[size]:     
-            if score > self._leaderboard[size][self._username]:
+        if self._username != None:
+            if self._username in self._leaderboard[size]:     
+                if score > self._leaderboard[size][self._username]:
+                    self._leaderboard[size][self._username] = score
+                    self.write_json(self._filename, self._leaderboard)
+            else:
                 self._leaderboard[size][self._username] = score
                 self.write_json(self._filename, self._leaderboard)
-        else:
-            self._leaderboard[size][self._username] = score
-            self.write_json(self._filename, self._leaderboard)         
 
     def write_json(self, filename, obj):
         sorted_obj = {}
@@ -286,6 +289,9 @@ class LeaderBoard():
                     elif event.key == pygame.K_RETURN:
                         running = False
                         self._username = name
+                    elif event.key == pygame.K_ESCAPE:
+                        running = False
+                        self._username = None
                     
 
             tiles.spawn_tiles(cell_cx, cell_cy)
@@ -313,7 +319,7 @@ def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, c
 
                     screen = pygame.display.set_mode((cell_cx*cell_width, cell_cy*cell_height), pygame.FULLSCREEN | pygame.SCALED)
                     screen.fill((0, 0, 0))
-                    main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, player)
+                    main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, player, score)
                 if exit_button.pressed(mouse_pos):
                     main = False
                     print("bye bye")
@@ -339,7 +345,7 @@ def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, c
         pygame.display.flip()
         clock.tick(FPS)
 
-def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, username):
+def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, username, score):
 
     tiles.spawn_tiles(cell_cx, cell_cy)
     alive = True
@@ -353,7 +359,6 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, usern
     snake = Snake(movement, cell_width, cell_height, cell_cx, cell_cy, dir_x=1, dir_y=0, angle=270, screen=screen)
     apple = Apple(cell_width, cell_height, cell_cx, cell_cy, apple_count, screen)
     font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
-    score = 0
     score_text = font.render(str(score), True, (0, 0, 0))
     score_rect = score_text.get_rect(center=(screen.get_width()/2, 20))
 
@@ -369,6 +374,7 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, usern
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     alive = False
+                    screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.FULLSCREEN | pygame.SCALED)
                 if input_num == 0:
                     if event.key == pygame.K_w or event.key == pygame.K_UP:
                         if movement[0][2] != 180 and movement[0][2] != 0:
@@ -405,12 +411,13 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, usern
             snake.check_rotation()       
 
             if snake.death_check():
-                leaderboard.write_leaderboard(username, score, settings.get_size())
+                leaderboard.write_leaderboard(score, settings.get_size())
                 screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.FULLSCREEN | pygame.SCALED)
                 alive = False
 
         if snake.win_check():
-            print("you win")
+            alive = False
+            main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, username, score)
 
 
         tiles.tile(screen.get_width()/2, 0)
@@ -538,7 +545,7 @@ if __name__ == "__main__":
     FPS = 60
 
     username = None
-
+    score = 0
     EXC = [
         pygame.K_ESCAPE,
         pygame.K_LSHIFT,
