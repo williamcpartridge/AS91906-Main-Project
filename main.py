@@ -11,13 +11,13 @@ import debug
 debug.DEBUG_LEVEL = 0
 
 class Snake():
-    def __init__(self, movement, cell_w, cell_h, cell_cx, cell_cy, dir_x, dir_y, angle, screen):
+    def __init__(self, movement, cell_w, cell_h, cell_cx, cell_cy, dir_x, dir_y, angle, canvas):
         self._movement = movement
         self._cell_w = cell_w
         self._cell_h = cell_h
         self._cell_cx = cell_cx
         self._cell_cy = cell_cy
-        self._screen = screen
+        self._canvas = canvas
         self._dir_x = dir_x
         self._dir_y = dir_y
         self._angle = angle
@@ -28,8 +28,8 @@ class Snake():
 
         snake_x = self._cell_w+(self._cell_w/2)
         snake_y = self._cell_h/2
-        self._segments = [MySprite(snake_x, snake_y, self._cell_w, self._cell_h, self._snake_head_img, self._screen, self._angle), \
-                MySprite(snake_x - self._cell_w, snake_y, self._cell_w, self._cell_h, self._snake_body_img, self._screen, self._angle)]
+        self._segments = [MySprite(snake_x, snake_y, self._cell_w, self._cell_h, self._snake_head_img, self._canvas, self._angle), \
+                MySprite(snake_x - self._cell_w, snake_y, self._cell_w, self._cell_h, self._snake_body_img, self._canvas, self._angle)]
 
     def get_head_pos(self):
         return (self._segments[0].get_x(), self._segments[0].get_y())
@@ -97,7 +97,7 @@ class Snake():
     def new_seg(self):
         new = MySprite(self._segments[-1].get_x() - self._movement[-1][0]*self._cell_w, \
                        self._segments[-1].get_y() - self._movement[-1][1]*self._cell_h, \
-                        self._cell_w, self._cell_h, self._snake_body_img, self._screen)
+                        self._cell_w, self._cell_h, self._snake_body_img, self._canvas)
         new.rotate(self._movement[-1][2])
         new.set_frame(0)
         return new
@@ -130,8 +130,8 @@ class Snake():
                 if self.cell_collide(segment):
                     return True
             
-        if self._segments[0].get_x() < self._cell_w/2 or self._segments[0].get_x() > self._screen.get_width() - self._cell_w/2 or \
-            self._segments[0].get_y() < self._cell_h/2 or self._segments[0].get_y() > self._screen.get_height() - self._cell_h/2:
+        if self._segments[0].get_x() < self._cell_w/2 or self._segments[0].get_x() > self._canvas.get_width() - self._cell_w/2 or \
+            self._segments[0].get_y() < self._cell_h/2 or self._segments[0].get_y() > self._canvas.get_height() - self._cell_h/2:
             return True
         
     def start(self):
@@ -149,14 +149,14 @@ class Snake():
             seg.draw()
 
 class Apple():
-    def __init__(self, cell_w, cell_h, cell_cx, cell_cy, apple_count, screen):
+    def __init__(self, cell_w, cell_h, cell_cx, cell_cy, apple_count, canvas):
         self._cell_w = cell_w
         self._cell_h = cell_h
         self._cell_cx = cell_cx
         self._cell_cy = cell_cy
         self._apple_list = []
         self._apple_count = apple_count
-        self._screen = screen
+        self._canvas = canvas
         self._apple_images = ImageList("images\\apple\\apple", cell_width, cell_height)
         print(self._apple_images)
         self._upgrades = {"Golden": (True, 1), "Boost": (True, 2)}
@@ -184,7 +184,7 @@ class Apple():
             debug.dprint(2, (cell_x, cell_y))
             ax = cell_x * self._cell_w + self._cell_w / 2
             ay = cell_y * self._cell_h + self._cell_h / 2
-            self._apple_list.append(MySprite(ax, ay, self._cell_w, self._cell_h, self._apple_images, self._screen))
+            self._apple_list.append(MySprite(ax, ay, self._cell_w, self._cell_h, self._apple_images, self._canvas))
             self._type_list.append(self.apple_type())
 
             #self._apple_list[-1].set_animation(0, 1, 1, False)
@@ -215,14 +215,14 @@ class Apple():
         self._apple_list.remove(self._apple_list[apple])
 
 class LeaderBoard():
-    def __init__(self, filename, screen):
+    def __init__(self, filename, canvas):
         self._filename = filename
         self._leaderboard = {}
         self.read_leaderboard()
         self._username = None
-        self._screen = screen
+        self._canvas = canvas
 
-    def write_leaderboard(self, score, size):
+    def write_leaderboard(self, score, size, screen):
         
         if size == (6, 5):
             size = "small"
@@ -234,7 +234,7 @@ class LeaderBoard():
             size = "custom"
         
         if self._username == None:
-            self.get_username()
+            self.get_username(screen)
         if self._username != None:
             if self._username in self._leaderboard[size]:     
                 if score > self._leaderboard[size][self._username]:
@@ -270,17 +270,23 @@ class LeaderBoard():
             print("No leaderboard file found, creating new one.")
             return {}
         
-    def get_username(self):
+    def get_username(self, screen):
         running = True
         name = ""
         font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
         surf = pygame.Surface((200, 50), pygame.SRCALPHA)
         surf.fill((255, 255, 255, 180))
-        rect = pygame.Rect((self._screen.get_width()/2)-100, (self._screen.get_height()/2)-50, 200, 50)
+        rect = pygame.Rect((self._canvas.get_width()/2)-100, (self._canvas.get_height()/2)-50, 200, 50)
         text = font.render(name, True, (0, 0, 0))
         text_rect = text.get_rect(center=rect.center)
         while running:
             for event in pygame.event.get():
+                if event.type == pygame.VIDEORESIZE:
+                    (screen_x, screen_y) = event.size 
+                    if fullscreen:
+                        screen = pygame.display.set_mode((screen_x, screen_y), pygame.FULLSCREEN)
+                    else:
+                        screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
                 if event.type == pygame.KEYDOWN:
                     if event.key not in EXC:
                         name = f"{name}{pygame.key.name(event.key)}"
@@ -294,41 +300,69 @@ class LeaderBoard():
                         self._username = None
                     
 
-            tiles.spawn_tiles(cell_cx, cell_cy)
+            tiles.spawn_tiles(cell_cx, cell_cy, canvas)
             text = font.render(name, True, (0, 0, 0))
-            self._screen.blit(surf, rect)
-            self._screen.blit(text, text_rect)
+            self._canvas.blit(surf, rect)
+            self._canvas.blit(text, text_rect)
+
+            scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
+
+            scaled_canvas = pygame.transform.scale(canvas, (LOGICAL_X * scale, LOGICAL_Y * scale))
+
+            offset_x = (screen_x - LOGICAL_X * scale) // 2
+            offset_y = (screen_y - LOGICAL_Y * scale) // 2
+
+            screen.blit(scaled_canvas, (offset_x, offset_y))
+
             pygame.display.flip()
 
-def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, cell_cy, settings, player):
-    play_button = Button(count=3, pos_index=1, font=font, text='Play', screen=screen, state="link")
-    settings_button = Button(count=3, pos_index=2, font=font, text='Settings', screen=screen, state="link")
-    leaderboard_button = Button(x=170, y=40, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20), text="Leader Board", screen=screen, state="link")
-    exit_button = Button(count=3, pos_index=3, font=font, text='Exit', screen=screen, state="link")
+def get_scaled_mouse_pos(screen_x, screen_y):
+    scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
 
+    offset_x = (screen_x - LOGICAL_X * scale) // 2
+    offset_y = (screen_y - LOGICAL_Y * scale) // 2
+
+    mx, my = pygame.mouse.get_pos()
+
+    return (
+        (mx - offset_x) / scale,
+        (my - offset_y) / scale
+    )
+
+def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, player, screen_x, screen_y):
+    play_button = Button(count=3, pos_index=1, font=font, text='Play', screen=canvas, state="link")
+    settings_button = Button(count=3, pos_index=2, font=font, text='Settings', screen=canvas, state="link")
+    leaderboard_button = Button(x=170, y=40, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20), text="Leader Board", screen=canvas, state="link")
+    exit_button = Button(count=3, pos_index=3, font=font, text='Exit', screen=canvas, state="link")
+    
     main = True
     while main:
-        mouse_pos = pygame.mouse.get_pos()
+        mouse_pos = get_scaled_mouse_pos(screen_x, screen_y)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 main = False
                 pygame.quit()
+            if event.type == pygame.VIDEORESIZE:
+                (screen_x, screen_y) = event.size 
+                if fullscreen:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.FULLSCREEN)
+                else:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if play_button.pressed(mouse_pos):
                     (cell_cx, cell_cy) = settings.get_size()
-
-                    screen = pygame.display.set_mode((cell_cx*cell_width, cell_cy*cell_height), pygame.FULLSCREEN | pygame.SCALED)
                     screen.fill((0, 0, 0))
-                    main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, player, score)
+                    game_canvas = pygame.transform.scale(canvas, (cell_cx*cell_width, cell_cy*cell_height))
+                    main_game_loop(game_canvas, screen, cell_cx, cell_cy, player, score, screen_x, screen_y)
                 if exit_button.pressed(mouse_pos):
                     main = False
                     print("bye bye")
                     pygame.quit()
                 if settings_button.pressed(mouse_pos):
-                    settings_menu(settings)
+                    settings_menu(canvas, screen, settings, screen_x, screen_y)
                 if leaderboard_button.pressed(mouse_pos):
                     leaderboard.read_leaderboard()
-                    leaderboard_menu(screen, leaderboard)
+                    leaderboard_menu(canvas, screen, leaderboard, screen_x, screen_y)
 
                 
             if event.type == pygame.KEYDOWN:
@@ -336,18 +370,32 @@ def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, c
                     pygame.quit()
 
 
-        screen.blit(bg_surf, bg_rect)
+        canvas.blit(bg_surf, bg_rect)
+
+        play_button.update(mouse_pos)
         play_button.draw()
+        leaderboard_button.update(mouse_pos)
         leaderboard_button.draw()
+        exit_button.update(mouse_pos)
         exit_button.draw()
-        settings_button.draw()
+        settings_button.update(mouse_pos) 
+        settings_button.draw() 
+
+        scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
+
+        scaled_canvas = pygame.transform.scale(canvas, (LOGICAL_X * scale, LOGICAL_Y * scale))
+
+        offset_x = (screen_x - LOGICAL_X * scale) // 2
+        offset_y = (screen_y - LOGICAL_Y * scale) // 2
+
+        screen.blit(scaled_canvas, (offset_x, offset_y))
 
         pygame.display.flip()
         clock.tick(FPS)
 
-def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, username, score):
+def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, screen_y):
 
-    tiles.spawn_tiles(cell_cx, cell_cy)
+    tiles.spawn_tiles(cell_cx, cell_cy, canvas)
     alive = True
     fc = 0
     apple_count = settings.get_apple_count()
@@ -356,11 +404,11 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, usern
     eaten = False
     (cell_cx, cell_cy) = settings.get_size()
     speed = settings.get_speed()
-    snake = Snake(movement, cell_width, cell_height, cell_cx, cell_cy, dir_x=1, dir_y=0, angle=270, screen=screen)
-    apple = Apple(cell_width, cell_height, cell_cx, cell_cy, apple_count, screen)
+    snake = Snake(movement, cell_width, cell_height, cell_cx, cell_cy, dir_x=1, dir_y=0, angle=270, canvas=canvas)
+    apple = Apple(cell_width, cell_height, cell_cx, cell_cy, apple_count, canvas)
     font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
     score_text = font.render(str(score), True, (0, 0, 0))
-    score_rect = score_text.get_rect(center=(screen.get_width()/2, 20))
+    score_rect = score_text.get_rect(center=(canvas.get_width()/2, 20))
 
     while alive:
         apple.spawn_apple(snake.get_cell_poss())
@@ -371,10 +419,16 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, usern
             if event.type == pygame.QUIT:
                 alive = False
                 pygame.quit()
+            if event.type == pygame.VIDEORESIZE:
+                (screen_x, screen_y) = event.size 
+                if fullscreen:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.FULLSCREEN)
+                else:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     alive = False
-                    screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.FULLSCREEN | pygame.SCALED)
+                    canvas = pygame.display.set_mode((LOGICAL_X, LOGICAL_Y))
                 if input_num == 0:
                     if event.key == pygame.K_w or event.key == pygame.K_UP:
                         if movement[0][2] != 180 and movement[0][2] != 0:
@@ -411,27 +465,38 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, usern
             snake.check_rotation()       
 
             if snake.death_check():
-                leaderboard.write_leaderboard(score, settings.get_size())
-                screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.FULLSCREEN | pygame.SCALED)
+                leaderboard.write_leaderboard(score, settings.get_size(), screen)
                 alive = False
 
         if snake.win_check():
             alive = False
-            main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, username, score)
+            main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, screen_y)
 
 
-        tiles.tile(screen.get_width()/2, 0)
-        tiles.tile((screen.get_width()/2)-1, 0)
+        tiles.tile(canvas.get_width()/2, 0)
+        tiles.tile((canvas.get_width()/2)-1, 0)
         snake.draw()
         apple.draw()
-        screen.blit(font.render(str(score), True, (0, 0, 0)), score_rect)
+        canvas.blit(font.render(str(score), True, (0, 0, 0)), score_rect)
+
+        scale = min(screen_x / canvas.get_width(), screen_y / canvas.get_height())
+
+        scaled_w = int(canvas.get_width() * scale)
+        scaled_h = int(canvas.get_height() * scale)
+
+        scaled_canvas = pygame.transform.scale(canvas, (scaled_w, scaled_h))
+
+        offset_x = (screen_x - scaled_w) // 2
+        offset_y = (screen_y - scaled_h) // 2
+
+        screen.blit(scaled_canvas, (offset_x, offset_y))
 
         pygame.display.flip()
         clock.tick(FPS)
 
-def settings_menu(settings):
+def settings_menu(canvas, screen, settings, screen_x, screen_y):
     settings.read_settings()
-    font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', int(menu_screen_x/20))
+    font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', int(LOGICAL_X/20))
     sizes_button = ["Small", "Medium", "Large"]
     sizes_game = [(6, 5), (10, 7), (16, 11)]
     speed_button = ["slow", "medium", "fast"]
@@ -442,18 +507,24 @@ def settings_menu(settings):
     size_index = sizes_game.index(settings.get_size())
     speed_index = speed_game.index(settings.get_speed())
     apple_index = apples_game.index(settings.get_apple_count())
-    size = Button(count=4, pos_index=1, font=font, text='size', screen=screen, state="multi", options=sizes_button, index=size_index)
-    speed = Button(count=4, pos_index=2, font=font, text="Speed", screen=screen, state="multi", options=speed_button, index=speed_index)
-    apples = Button(count=4, pos_index=3, font=font, text="Apple count", screen=screen, state="multi", options=apples_button, index=apple_index)
-    back = Button(count=4, pos_index=4, font=font, text="back", screen=screen, state="link")
+    size = Button(count=4, pos_index=1, font=font, text='size', screen=canvas, state="multi", options=sizes_button, index=size_index)
+    speed = Button(count=4, pos_index=2, font=font, text="Speed", screen=canvas, state="multi", options=speed_button, index=speed_index)
+    apples = Button(count=4, pos_index=3, font=font, text="Apple count", screen=canvas, state="multi", options=apples_button, index=apple_index)
+    back = Button(count=4, pos_index=4, font=font, text="back", screen=canvas, state="link")
     settings_open = True
 
     while settings_open:
-        mouse_pos = pygame.mouse.get_pos()
+        mouse_pos = get_scaled_mouse_pos(screen_x, screen_y)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
+            if event.type == pygame.VIDEORESIZE:
+                (screen_x, screen_y) = event.size 
+                if fullscreen:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.FULLSCREEN)
+                else:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
             if event.type == pygame.MOUSEBUTTONDOWN:
                 size_index = size.pressed(mouse_pos)
                 speed_index = speed.pressed(mouse_pos)
@@ -469,41 +540,58 @@ def settings_menu(settings):
                 if event.key == pygame.K_ESCAPE:
                     pygame.quit()
                 
-        screen.blit(bg_surf, bg_rect)
+        canvas.blit(bg_surf, bg_rect)
 
+        size.update(mouse_pos)  
         size.draw()
+        speed.update(mouse_pos)
         speed.draw()
+        apples.update(mouse_pos)
         apples.draw()
+        back.update(mouse_pos)
         back.draw()
+
+        scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
+
+        scaled_canvas = pygame.transform.scale(canvas, (LOGICAL_X * scale, LOGICAL_Y * scale))
+
+        offset_x = (screen_x - LOGICAL_X * scale) // 2
+        offset_y = (screen_y - LOGICAL_Y * scale) // 2
+
+        screen.blit(scaled_canvas, (offset_x, offset_y))
 
         pygame.display.flip()
         clock.tick(FPS)
 
-def leaderboard_menu(screen, leaderboard_obj):
+def leaderboard_menu(canvas, screen, leaderboard_obj, screen_x, screen_y):
     font_title = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 40)
     font_text = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 25)
     font_text_small = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 18)
     font_back = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 30)
 
-    back_button = Button(y=screen.get_height()-70, x=screen.get_width()/2, pos_index=1, font=font_back, text="Back", screen=screen, state="link")
+    back_button = Button(y=canvas.get_height()-70, x=canvas.get_width()/2, pos_index=1, font=font_back, text="Back", screen=canvas, state="link")
 
     running = True
     while running:
-        mouse_pos = pygame.mouse.get_pos()
-
+        mouse_pos = get_scaled_mouse_pos(screen_x, screen_y)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 return
-
+            if event.type == pygame.VIDEORESIZE:
+                (screen_x, screen_y) = event.size 
+                if fullscreen:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.FULLSCREEN)
+                else:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if back_button.pressed(mouse_pos):
                     running = False
 
-        screen.fill((20, 20, 20))
+        canvas.fill((20, 20, 20))
 
         title = font_title.render("LEADERBOARD", True, (255, 255, 255))
-        screen.blit(title, (screen.get_width()//2 - title.get_width()//2, 20))
+        canvas.blit(title, (canvas.get_width()//2 - title.get_width()//2, 20))
 
         y_offset = 120
         x_offset = 0
@@ -512,18 +600,18 @@ def leaderboard_menu(screen, leaderboard_obj):
 
         if not data:
             empty = font_text.render("No scores yet", True, (200, 200, 200))
-            screen.blit(empty, (screen.get_width()//2 - empty.get_width()//2, y_offset))
+            canvas.blit(empty, (canvas.get_width()//2 - empty.get_width()//2, y_offset))
 
         else:
             for size in ["small", "medium", "large", "custom"]:
                 if size in data:
                     header = font_text.render(size.upper(), True, (255, 200, 100))
-                    screen.blit(header, (60+x_offset, y_offset))
+                    canvas.blit(header, (60+x_offset, y_offset))
                     y_offset += 40
 
                     for i, (player, score) in enumerate(data[size].items()):
                         text = font_text_small.render(f"{i+1}. {player} - {score}", True, (255, 255, 255))
-                        screen.blit(text, (80+x_offset, y_offset))
+                        canvas.blit(text, (80+x_offset, y_offset))
                         y_offset += 30
 
                     y_offset = 120
@@ -531,6 +619,15 @@ def leaderboard_menu(screen, leaderboard_obj):
 
         back_button.update(mouse_pos)
         back_button.draw()
+
+        scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
+
+        scaled_canvas = pygame.transform.scale(canvas, (LOGICAL_X * scale, LOGICAL_Y * scale))
+
+        offset_x = (screen_x - LOGICAL_X * scale) // 2
+        offset_y = (screen_y - LOGICAL_Y * scale) // 2
+
+        screen.blit(scaled_canvas, (offset_x, offset_y))
 
         pygame.display.flip()
         clock.tick(FPS)
@@ -582,38 +679,32 @@ if __name__ == "__main__":
 
     cell_width, cell_height = 40, 40
 
-    fullscreen = False
-
-    if fullscreen:
-        os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
-        if cell_cx > cell_cy:
-            cell_width = pygame.display.Info().current_h / cell_cy
-            cell_height = pygame.display.Info().current_h / cell_cy
-        else:
-            cell_width = pygame.display.Info().current_w / cell_cx
-            cell_height = pygame.display.Info().current_w / cell_cx
-
-    scr_x=cell_width*cell_cx ; scr_y=cell_width*cell_cy
-
-    menu_screen_x, menu_screen_y = 1000, 700
+    LOGICAL_X, LOGICAL_Y = pygame.display.Info().current_w/1.5, (pygame.display.Info().current_h-30)/1.5
+    screen_x, screen_y = pygame.display.Info().current_w, pygame.display.Info().current_h - 30
 
     font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 75)
 
 
     pygame.display.set_caption('Snake game')
 
-    
-    screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.FULLSCREEN | pygame.SCALED)
-    #screen = pygame.display.set_mode((pygame.display.Info().current_w, pygame.display.Info().current_h), pygame.SCALED)
-    #screen = pygame.display.set_mode((cell_cx*cell_width, cell_cy*cell_height), pygame.SCALED)
-    leaderboard = LeaderBoard("leaderboard.json", screen)
-    tiles = TileSpawn(cell_cx, cell_cy, cell_width, cell_height, screen)
+    canvas = pygame.Surface((LOGICAL_X, LOGICAL_Y))
 
-    bg_surf = pygame.transform.scale(pygame.image.load('images\\main_gui\\bg.jpg').convert_alpha(), (screen.get_width(), screen.get_height()))
-    bg_rect = bg_surf.get_rect(center=(screen.get_width()/2, screen.get_height()/2))
+    fullscreen = False
+
+    if fullscreen:
+        os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
+        screen = pygame.display.set_mode((screen_x, screen_y), pygame.FULLSCREEN)
+    else:
+        screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
+
+    leaderboard = LeaderBoard("leaderboard.json", canvas)
+    tiles = TileSpawn(cell_cx, cell_cy, cell_width, cell_height, canvas)
+
+    bg_surf = pygame.transform.scale(pygame.image.load('images\\main_gui\\bg.jpg').convert_alpha(), (canvas.get_width(), canvas.get_height()))
+    bg_rect = bg_surf.get_rect(center=(canvas.get_width()/2, canvas.get_height()/2))
 
 
-    main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, cell_cy, settings, username)
+    main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, username, screen_x, screen_y)
     #main_game_loop(screen)
     #spawn_tiles()
     debug.dprint(1, "game quitting")

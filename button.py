@@ -32,6 +32,7 @@ class Button():
         self._transition_speed = 0.1
         self._bob_range = 5    
         self._bob_speed = 0.007     
+        
 
     def update(self, mouse_pos):
         self._is_hovered = self._bg_rect.collidepoint(mouse_pos)

@@ -9,14 +9,14 @@ TEST_W = 30
 TEST_H = 30
 
 class MySprite():
-    def __init__(self, x, y, w, h, images, screen, angle=0):
+    def __init__(self, x, y, w, h, images, canvas, angle=0):
         valid = True
-        if x >= 0 and x <= screen.get_width():
+        if x >= 0 and x <= canvas.get_width():
             self._x = x
         else:
             print("off screen (x)")
             valid = False
-        if y >= 0 and y <= screen.get_height():
+        if y >= 0 and y <= canvas.get_height():
             self._y = y
         else:
             print("off screen (y)")
@@ -36,7 +36,7 @@ class MySprite():
         else:
             self._angle = 0
 
-        self._screen = screen
+        self._canvas = canvas
         
         self._start_frame = 0
         self._end_frame = 0
@@ -55,23 +55,23 @@ class MySprite():
         return self._x
 
     def set_x(self, x):
-        if x >= 0 and x < self._screen.get_width():
+        if x >= 0 and x < self._canvas.get_width():
             self._x = x
         elif x < 0:
             self._x = 0
         else:
-            self._x = self._screen.get_width()
+            self._x = self._canvas.get_width()
         
     def get_y(self):
         return self._y
 
     def set_y(self, y):
-        if y >= 0 and y < self._screen.get_height():
+        if y >= 0 and y < self._canvas.get_height():
             self._y = y
         elif y < 0:
             self._y = 0
         else:
-            self._y = self._screen.get_height() - 1
+            self._y = self._canvas.get_height() - 1
 
     x = property(get_x, set_x)
     y = property(get_y, set_y)
@@ -144,7 +144,7 @@ class MySprite():
                 return False
                 
     def draw(self):
-        self._screen.blit(pygame.transform.rotate(self._images.images[self._current_frame], self._angle), self.get_rect())
+        self._canvas.blit(pygame.transform.rotate(self._images.images[self._current_frame], self._angle), self.get_rect())
 
 
 # TESTING
