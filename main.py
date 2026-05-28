@@ -166,6 +166,7 @@ class Apple():
     def spawn_apple(self, snake_cells):
         if len(self._apple_list) < self._apple_count and ((self._cell_cx*self._cell_cy) - len(snake_cells)) > self._apple_count:
             done = False
+            type = self.apple_type()
             while not done:
                 cell_x = random.randint(0, self._cell_cx - 1) 
                 cell_y = random.randint(0, self._cell_cy - 1)
@@ -185,13 +186,13 @@ class Apple():
             ax = cell_x * self._cell_w + self._cell_w / 2
             ay = cell_y * self._cell_h + self._cell_h / 2
             self._apple_list.append(MySprite(ax, ay, self._cell_w, self._cell_h, self._apple_images, self._canvas))
-            self._type_list.append(self.apple_type())
+            self._type_list.append(type)
 
             #self._apple_list[-1].set_animation(0, 1, 1, False)
 
     def apple_type(self):
         for upgrade in self._upgrades.keys():
-            if self._upgrades[upgrade]:
+            if self._upgrades[upgrade][0]:
                 if random.randint(1, 5) == 5:
                     print(upgrade)
                     return upgrade
@@ -203,16 +204,19 @@ class Apple():
                 self._apple_list[i].set_frame(0)
             else:
                 self._apple_list[i].set_frame(self._upgrades[self._type_list[i]][1])
-                print(self._upgrades[self._type_list[i]][1])
-            #self._apple_list[i].animate()
+
             self._apple_list[i].draw()
             
 
     def get_apples(self):
         return self._apple_list
     
+    def get_type(self):
+        return self._type_list
+    
     def rm(self, apple):
-        self._apple_list.remove(self._apple_list[apple])
+        self._apple_list.pop(apple)
+        self._type_list.pop(apple)
 
 class LeaderBoard():
     def __init__(self, filename, canvas):
@@ -394,7 +398,7 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, play
         clock.tick(FPS)
 
 def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, screen_y):
-
+    time = 0
     tiles.spawn_tiles(cell_cx, cell_cy, canvas)
     alive = True
     fc = 0
@@ -451,16 +455,38 @@ def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, 
             if eaten:
                 snake.append_seg(new)
                 eaten = False
-
+        
+            if time > 0 :
+                time -= 1
+            elif time == 0:
+                speed = settings.get_speed()
 
             snake.step()
 
             for apple_sprite in apple.get_apples():
                 if snake.cell_collide(apple_sprite):
-                    apple.rm(apple.get_apples().index(apple_sprite))
+                    i = apple.get_apples().index(apple_sprite)
+
+                    upgrade = apple.get_type()[i]
+
+                    apple.rm(i)
+
                     new = snake.new_seg()
-                    score += 1
                     eaten = True
+
+                    print(i)
+                    print(upgrade)
+
+                    if upgrade != "Normal":
+                        if upgrade == "Golden":
+                            score += 5
+
+                        elif upgrade == "Boost":
+                            speed = 10
+                            time = 30
+
+                    else:
+                        score += 1
             
             snake.check_rotation()       
 
