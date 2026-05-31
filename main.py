@@ -226,7 +226,7 @@ class LeaderBoard():
         self._username = None
         self._canvas = canvas
 
-    def write_leaderboard(self, score, size, screen):
+    def write_leaderboard(self, score, size, screen, screen_x, screen_y):
         
         if size == (6, 5):
             size = "small"
@@ -238,7 +238,7 @@ class LeaderBoard():
             size = "custom"
         
         if self._username == None:
-            self.get_username(screen)
+            self.get_username(screen, screen_x, screen_y)
         if self._username != None:
             if self._username in self._leaderboard[size]:     
                 if score > self._leaderboard[size][self._username]:
@@ -274,7 +274,7 @@ class LeaderBoard():
             print("No leaderboard file found, creating new one.")
             return {}
         
-    def get_username(self, screen):
+    def get_username(self, screen, screen_x, screen_y):
         running = True
         name = ""
         font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
@@ -304,14 +304,14 @@ class LeaderBoard():
                         self._username = None
                     
 
-            tiles.spawn_tiles(cell_cx, cell_cy, canvas)
+            tiles.spawn_tiles(cell_cx, cell_cy, self._canvas)
             text = font.render(name, True, (0, 0, 0))
             self._canvas.blit(surf, rect)
             self._canvas.blit(text, text_rect)
 
             scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
 
-            scaled_canvas = pygame.transform.scale(canvas, (LOGICAL_X * scale, LOGICAL_Y * scale))
+            scaled_canvas = pygame.transform.scale(screen, (LOGICAL_X * scale, LOGICAL_Y * scale))
 
             offset_x = (screen_x - LOGICAL_X * scale) // 2
             offset_y = (screen_y - LOGICAL_Y * scale) // 2
@@ -491,7 +491,7 @@ def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, 
             snake.check_rotation()       
 
             if snake.death_check():
-                leaderboard.write_leaderboard(score, settings.get_size(), screen)
+                leaderboard.write_leaderboard(score, settings.get_size(), screen, screen_x, screen_y)
                 alive = False
 
         if snake.win_check():
@@ -581,8 +581,8 @@ def settings_menu(canvas, screen, settings, screen_x, screen_y):
 
         scaled_canvas = pygame.transform.scale(canvas, (LOGICAL_X * scale, LOGICAL_Y * scale))
 
-        offset_x = (screen_x - LOGICAL_X * scale) // 2
-        offset_y = (screen_y - LOGICAL_Y * scale) // 2
+        offset_x = (screen_x - LOGICAL_X * scale) / 2
+        offset_y = (screen_y - LOGICAL_Y * scale) / 2
 
         screen.blit(scaled_canvas, (offset_x, offset_y))
 
