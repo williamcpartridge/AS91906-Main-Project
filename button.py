@@ -3,6 +3,8 @@ import math
 
 class Button():
     def __init__(self, font=None, text="", screen=None, state="link", options=None, index=0, count=None, pos_index=None, x=0, y=0):
+        pygame.init()
+
         if count != None:
             self._x = screen.get_width()/2
             self._y = (2*pos_index)*(screen.get_height()/(((count+1)*2)))
@@ -75,6 +77,7 @@ class Button():
 
         elif self._state == "multi":
             if rect.collidepoint(position):
+
                 if self._index < len(self._options) - 1:
                     self._index += 1
                 else:
