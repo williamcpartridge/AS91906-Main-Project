@@ -2,9 +2,9 @@ import pygame
 import math
 
 class Button():
-    def __init__(self, font=None, text="", screen=None, state="link", options=None, index=0, count=None, pos_index=None, x=0, y=0):
+    def __init__(self, font=None, text="", screen=None, state="link", func=None, options=None, index=0, count=None, pos_index=None, x=0, y=0):
         pygame.init()
-
+        self._func = func
         if count != None:
             self._x = screen.get_width()/2
             self._y = (2*pos_index)*(screen.get_height()/(((count+1)*2)))
@@ -35,6 +35,8 @@ class Button():
         self._bob_range = 5    
         self._bob_speed = 0.007     
         
+    def get_func(self):
+        return self._func
 
     def update(self, mouse_pos):
         self._is_hovered = self._bg_rect.collidepoint(mouse_pos)

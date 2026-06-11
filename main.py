@@ -276,53 +276,49 @@ class LeaderBoard(): # handles the reading and writing to the leaderboard files
             print("No leaderboard file found, creating new one.")
             return {}
         
-    def get_username(self, screen, screen_x, screen_y): # loop containing input box for getting the players username
-        running = True
-        # initiating veriables, fonts and rectangles
-        name = ""
-        font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
-        surf = pygame.Surface((200, 50), pygame.SRCALPHA)
-        surf.fill((255, 255, 255, 180))
-        rect = pygame.Rect((self._canvas.get_width()/2)-100, (self._canvas.get_height()/2)-50, 200, 50)
+def get_username(screen, screen_x, screen_y): # loop containing input box for getting the players username
+    running = True
+    # initiating veriables, fonts and rectangles
+    name = ""
+    font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
+    surf = pygame.Surface((200, 50), pygame.SRCALPHA)
+    surf.fill((255, 255, 255, 180))
+    rect = pygame.Rect((canvas.get_width()/2)-100, (canvas.get_height()/2)-50, 200, 50)
+    text = font.render(name, True, (0, 0, 0))
+    text_rect = text.get_rect(center=rect.center)
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.VIDEORESIZE: # resizes screen in case of video resize
+                (screen_x, screen_y) = event.size 
+                if fullscreen:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.FULLSCREEN)
+                else:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
+            if event.type == pygame.KEYDOWN: # andles key presses and adds them to a string to be displayed and used at player username
+                if event.key not in EXC:
+                    name = f"{name}{pygame.key.name(event.key)}"
+                elif event.key == pygame.K_BACKSPACE:
+                    name = name[:-1]
+                elif event.key == pygame.K_RETURN:
+                    running = False
+                    username = name
+                elif event.key == pygame.K_ESCAPE:
+                    running = False
+                    username = None
+                
+        # displays all objects for the input box including what the user is typing
+        canvas.blit(bg_surf, bg_rect)
+        tiles.spawn_tiles(cell_cx, cell_cy, canvas)
         text = font.render(name, True, (0, 0, 0))
-        text_rect = text.get_rect(center=rect.center)
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.VIDEORESIZE: # resizes screen in case of video resize
-                    (screen_x, screen_y) = event.size 
-                    if fullscreen:
-                        screen = pygame.display.set_mode((screen_x, screen_y), pygame.FULLSCREEN)
-                    else:
-                        screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
-                if event.type == pygame.KEYDOWN: # andles key presses and adds them to a string to be displayed and used at player username
-                    if event.key not in EXC:
-                        name = f"{name}{pygame.key.name(event.key)}"
-                    elif event.key == pygame.K_BACKSPACE:
-                        name = name[:-1]
-                    elif event.key == pygame.K_RETURN:
-                        running = False
-                        self._username = name
-                    elif event.key == pygame.K_ESCAPE:
-                        running = False
-                        self._username = None
-                    
-            # displays all objects for the input box including what the user is typing
-            tiles.spawn_tiles(cell_cx, cell_cy, self._canvas)
-            text = font.render(name, True, (0, 0, 0))
-            self._canvas.blit(surf, rect)
-            self._canvas.blit(text, text_rect)
-
-            # sizing up the canvas to he screen 
-            scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
-
-            scaled_canvas = pygame.transform.scale(screen, (LOGICAL_X * scale, LOGICAL_Y * scale))
-
-            offset_x = (screen_x - LOGICAL_X * scale) // 2
-            offset_y = (screen_y - LOGICAL_Y * scale) // 2
-
-            screen.blit(scaled_canvas, (offset_x, offset_y))
-
-            pygame.display.flip()
+        canvas.blit(surf, rect)
+        canvas.blit(text, text_rect)
+        # sizing up the canvas to he screen 
+        scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
+        scaled_canvas = pygame.transform.scale(screen, (LOGICAL_X * scale, LOGICAL_Y * scale))
+        offset_x = (screen_x - LOGICAL_X * scale) // 2
+        offset_y = (screen_y - LOGICAL_Y * scale) // 2
+        screen.blit(scaled_canvas, (offset_x, offset_y))
+        pygame.display.flip()
 
 def get_scaled_mouse_pos(screen_x, screen_y): # scales mouse position
     scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
@@ -339,10 +335,36 @@ def get_scaled_mouse_pos(screen_x, screen_y): # scales mouse position
 
 def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, player, screen_x, screen_y): # menu loop containing options to play edit settings or qiot the game
     global main_running
-    play_button = Button(count=3, pos_index=1, font=font, text='Play', screen=canvas, state="link")
-    settings_button = Button(count=3, pos_index=2, font=font, text='Settings', screen=canvas, state="link")
-    leaderboard_button = Button(x=170, y=40, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20), text="Leader Board", screen=canvas, state="link")
-    exit_button = Button(count=3, pos_index=3, font=font, text='Exit', screen=canvas, state="link")
+    def play():
+        (cx, cy) = settings.get_size()
+        screen.fill((0, 0, 0))
+        game_canvas = pygame.Surface((cx * cell_width, cy * cell_height))
+        main_game_loop(game_canvas, screen, cx, cy, player, score, screen_x, screen_y)
+
+    def open_settings():
+        settings_menu(canvas, screen, settings, screen_x, screen_y)
+
+    def open_leaderboard():
+        leaderboard.read_leaderboard()
+        leaderboard_menu(canvas, screen, leaderboard, screen_x, screen_y)
+
+    def quit_game():
+        global main_running
+        main_running = False
+        print("bye bye")
+
+    button_list = [
+        Button(count=3, pos_index=1, font=font, text='Play', screen=canvas, state="link", func=play),
+        Button(count=3, pos_index=2, font=font, text='Settings', screen=canvas, state="link", func=open_settings),
+        Button(count=3, pos_index=3, font=font, text='Exit', screen=canvas, state="link", func=quit_game),
+        Button(x=170, y=40, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20),
+               text="Leader Board", screen=canvas, state="link", func=open_leaderboard),
+        Button(x=canvas.get_width() - 170, y=40, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20),
+               text="change user", screen=canvas, state="link", func=get_username),
+    ]
+
+    if player == None:
+        get_username(screen, screen_x, screen_y)
     
     while main_running:
         mouse_pos = get_scaled_mouse_pos(screen_x, screen_y)
@@ -356,19 +378,11 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, play
                 else:
                     screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if play_button.pressed(mouse_pos):
-                    (cell_cx, cell_cy) = settings.get_size()
-                    screen.fill((0, 0, 0))
-                    game_canvas = pygame.transform.scale(canvas, (cell_cx*cell_width, cell_cy*cell_height))
-                    main_game_loop(game_canvas, screen, cell_cx, cell_cy, player, score, screen_x, screen_y)
-                if exit_button.pressed(mouse_pos):
-                    main_running = False
-                    print("bye bye")
-                if settings_button.pressed(mouse_pos):
-                    settings_menu(canvas, screen, settings, screen_x, screen_y)
-                if leaderboard_button.pressed(mouse_pos):
-                    leaderboard.read_leaderboard()
-                    leaderboard_menu(canvas, screen, leaderboard, screen_x, screen_y)
+                for button in button_list:
+                    if button.pressed(mouse_pos):
+                        func = button.get_func()
+                        if func:
+                            func()
 
                 
             if event.type == pygame.KEYDOWN:
@@ -378,14 +392,9 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, play
 
         canvas.blit(bg_surf, bg_rect)
 
-        play_button.update(mouse_pos)
-        play_button.draw()
-        leaderboard_button.update(mouse_pos)
-        leaderboard_button.draw()
-        exit_button.update(mouse_pos)
-        exit_button.draw()
-        settings_button.update(mouse_pos) 
-        settings_button.draw() 
+        for button in button_list:
+            button.update(mouse_pos)
+            button.draw()
 
         scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
 
