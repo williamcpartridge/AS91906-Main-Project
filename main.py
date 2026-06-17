@@ -1,17 +1,116 @@
+# pylint: disable=no-member
+# pylint: disable=invalid-name
 import os # used for positioning the window at startup and faster file paths
-import pygame # module that the game runs on
+import json
 import random # for random apple positions and apple types
+import pygame # module that the game runs on
 from settings import Settings # settings class save/write
 from button import Button # button class handle button drawing and presses
 from mysprite import MySprite # sprite class handles drawing sprites and movement of entities
 from imagelist import ImageList # gets images of an object eg. snake
 from tilespawn import TileSpawn # draws the game board and updates cells that are altered
-import json
 import debug
 debug.DEBUG_LEVEL = 0
 
-class Snake(): # snake class handles snake movement and segment management
-    def __init__(self, movement, cell_w, cell_h, cell_cx, cell_cy, dir_x, dir_y, angle, canvas): # initiating variables for the snake class
+FPS = 60 # runs game at 60 fps
+
+LOGICAL_X, LOGICAL_Y = pygame.display.Info().current_w/1.5, (pygame.display.Info().current_h-30)/1.5 # logical screen size this is what the game sees
+
+EXC = [ # excluded items for input boxes
+    pygame.K_ESCAPE,
+    pygame.K_LSHIFT,
+    pygame.K_RSHIFT,
+    pygame.K_LCTRL,
+    pygame.K_RCTRL,
+    pygame.K_BACKSPACE,
+    pygame.K_LALT,
+    pygame.K_RALT,
+    pygame.K_TAB,
+    pygame.K_F1,
+    pygame.K_F2,
+    pygame.K_F3,
+    pygame.K_F4,
+    pygame.K_F5,
+    pygame.K_F6,
+    pygame.K_F7,
+    pygame.K_F8,
+    pygame.K_F9,
+    pygame.K_F10,
+    pygame.K_F11,
+    pygame.K_F12,
+    pygame.K_RETURN,
+    pygame.K_UP,
+    pygame.K_LEFT,
+    pygame.K_RIGHT,
+    pygame.K_DOWN,
+    pygame.K_CAPSLOCK,
+    pygame.K_LMETA,
+    pygame.K_SPACE,
+    pygame.K_NUMLOCK,
+    pygame.K_NUMLOCKCLEAR,
+    pygame.K_DELETE,
+]
+
+INC = [
+    pygame.K_0,
+    pygame.K_1,
+    pygame.K_2,
+    pygame.K_3,
+    pygame.K_4,
+    pygame.K_5,
+    pygame.K_6,
+    pygame.K_7,
+    pygame.K_8,
+    pygame.K_9,
+    pygame.K_q,
+    pygame.K_w,
+    pygame.K_r,
+    pygame.K_t,
+    pygame.K_y,
+    pygame.K_u,
+    pygame.K_i,
+    pygame.K_o,
+    pygame.K_p,
+    pygame.K_a,
+    pygame.K_s,
+    pygame.K_d,
+    pygame.K_f,
+    pygame.K_g,
+    pygame.K_h,
+    pygame.K_j,
+    pygame.K_k,
+    pygame.K_l,
+    pygame.K_z,
+    pygame.K_x,
+    pygame.K_c,
+    pygame.K_v,
+    pygame.K_b,
+    pygame.K_n,
+    pygame.K_m,
+    pygame.KSCAN_APOSTROPHE,
+    pygame.K_EXCLAIM,
+    pygame.K_AT,
+    pygame.K_HASH,
+    pygame.K_DOLLAR,
+    pygame.K_PERCENT,
+    pygame.K_POWER,
+    pygame.K_ASTERISK,
+    pygame.K_RIGHTBRACKET,
+    pygame.K_LEFTBRACKET,
+    pygame.K_MINUS,
+    pygame.K_PLUS,
+    pygame.K_EQUALS,
+    pygame.K_UNDERSCORE,
+    pygame.K_GREATER,
+    pygame.K_LESS,
+    pygame.K_COMMA,
+    pygame.K_PERIOD,
+]
+
+class Snake():
+    """Snake class handles snake movement and segment management"""
+    def __init__(self, movement, cell_w, cell_h, cell_cx, cell_cy, dir_x, dir_y, angle, canvas):
+        """initiating variables for the snake class"""
         self._movement = movement
         self._cell_w = cell_w
         self._cell_h = cell_h
@@ -31,41 +130,52 @@ class Snake(): # snake class handles snake movement and segment management
         self._segments = [MySprite(snake_x, snake_y, self._cell_w, self._cell_h, self._snake_head_img, self._canvas, self._angle), \
                 MySprite(snake_x - self._cell_w, snake_y, self._cell_w, self._cell_h, self._snake_body_img, self._canvas, self._angle)] # creates starting list of snake segments with mysprite objects
 
-    def get_head_pos(self): # returns the (x, y) position of the snakes head
+    def get_head_pos(self): 
+        """returns the (x, y) position of the snakes head"""
         return (self._segments[0].get_x(), self._segments[0].get_y())
     
-    def get_cell_poss(self): # get the cell that each snake segment is in
+    def get_cell_poss(self): 
+        """get the cell that each snake segment is in"""
         temp = []
         for seg in self._segments:
             temp.append((self.get_cell_x(seg.get_x()), self.get_cell_y(seg.get_y())))
         #debug.dprint(2, temp)
         return temp
 
-    def get_cell_x(self, x): # get the x position of a snake seg
+    def get_cell_x(self, x):
+        """get the x position of a snake seg"""
         return int(x/self._cell_w)
 
-    def get_cell_y(self, y): # get the y position of a snake seg
+    def get_cell_y(self, y):
+        """get the y position of a snake seg"""
         return int(y/self._cell_h)
     
-    def set_dir_x(self, dir_x): # set the x part of the direction vector for the snake
+    def set_dir_x(self, dir_x): 
+        """set the x part of the direction vector for the snake"""
         self._dir_x = dir_x
     
-    def get_dir_x(self): # get the x part of the direction vector of the snake
+    def get_dir_x(self):
+        """get the x part of the direction vector of the snake"""
         return self._dir_x
 
-    def set_dir_y(self, dir_y): # set the y part of the direction vector for the snake
+    def set_dir_y(self, dir_y):
+        """set the y part of the direction vector for the snake"""
         self._dir_y = dir_y
 
-    def get_dir_y(self): # get the y part of the direction vector of the snake
+    def get_dir_y(self):
+        """get the y part of the direction vector of the snake"""
         return self._dir_y
 
-    def set_angle(self, angle): # sets the direction the snake sprites are pointing
+    def set_angle(self, angle):
+        """sets the direction the snake sprites are pointing"""
         self._angle = angle
 
-    def get_angle(self): # gets the direction the snake sprites are pointing
+    def get_angle(self):
+        """gets the direction the snake sprites are pointing"""
         return self._angle
 
-    def set_movement(self, dir_x, dir_y, angle): # sets the direction vector and angle of the snake
+    def set_movement(self, dir_x, dir_y, angle):
+        """sets the direction vector and angle of the snake"""
         self.set_dir_x(dir_x)
         self.set_dir_y(dir_y)
         self.set_angle(angle)
@@ -148,7 +258,8 @@ class Snake(): # snake class handles snake movement and segment management
         for seg in self._segments:
             seg.draw()
 
-class Apple(): # handles spwing apples and buffs for apple types
+class Apple(): 
+    """Handles spwing apples and buffs for apple types"""
     def __init__(self, cell_w, cell_h, cell_cx, cell_cy, apple_count, canvas):  # initiating variables for the apple class
         self._cell_w = cell_w
         self._cell_h = cell_h
@@ -219,15 +330,15 @@ class Apple(): # handles spwing apples and buffs for apple types
         self._apple_list.pop(apple)
         self._type_list.pop(apple)
 
-class LeaderBoard(): # handles the reading and writing to the leaderboard files
+class LeaderBoard(): 
+    """handles the reading and writing to the leaderboard files"""
     def __init__(self, filename, canvas):  # initiating variables for the leaderboard class
         self._filename = filename
         self._leaderboard = {}
         self.read_leaderboard()
-        self._username = None
         self._canvas = canvas
 
-    def write_leaderboard(self, score, size, screen, screen_x, screen_y): # handles writing scores to the leaderboard
+    def write_leaderboard(self, score, size, username): # handles writing scores to the leaderboard
         # checks for size/catagory
         if size == (6, 5):
             size = "small"
@@ -239,15 +350,13 @@ class LeaderBoard(): # handles the reading and writing to the leaderboard files
             size = "custom"
         
         # checks if score is valid
-        if self._username == None: 
-            self.get_username(screen, screen_x, screen_y)
-        if self._username != None:
-            if self._username in self._leaderboard[size]:     
-                if score > self._leaderboard[size][self._username]:
-                    self._leaderboard[size][self._username] = score
+        if username != None and username != "":
+            if username in self._leaderboard[size]:     
+                if score > self._leaderboard[size][username]:
+                    self._leaderboard[size][username] = score
                     self.write_json(self._filename, self._leaderboard)
             else:
-                self._leaderboard[size][self._username] = score
+                self._leaderboard[size][username] = score
                 self.write_json(self._filename, self._leaderboard)
 
     def write_json(self, filename, obj): # writes and sorts the scores to leaderboard file
@@ -276,51 +385,25 @@ class LeaderBoard(): # handles the reading and writing to the leaderboard files
             print("No leaderboard file found, creating new one.")
             return {}
         
-def get_username(screen, screen_x, screen_y): # loop containing input box for getting the players username
-    running = True
-    # initiating veriables, fonts and rectangles
-    name = ""
-    font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
-    surf = pygame.Surface((200, 50), pygame.SRCALPHA)
-    surf.fill((255, 255, 255, 180))
-    rect = pygame.Rect((canvas.get_width()/2)-100, (canvas.get_height()/2)-50, 200, 50)
-    text = font.render(name, True, (0, 0, 0))
-    text_rect = text.get_rect(center=rect.center)
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.VIDEORESIZE: # resizes screen in case of video resize
-                (screen_x, screen_y) = event.size 
-                if fullscreen:
-                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.FULLSCREEN)
-                else:
-                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
-            if event.type == pygame.KEYDOWN: # andles key presses and adds them to a string to be displayed and used at player username
-                if event.key not in EXC:
-                    name = f"{name}{pygame.key.name(event.key)}"
-                elif event.key == pygame.K_BACKSPACE:
-                    name = name[:-1]
-                elif event.key == pygame.K_RETURN:
-                    running = False
-                    username = name
-                elif event.key == pygame.K_ESCAPE:
-                    running = False
-                    username = None
-                
-        # displays all objects for the input box including what the user is typing
-        canvas.blit(bg_surf, bg_rect)
-        tiles.spawn_tiles(cell_cx, cell_cy, canvas)
-        text = font.render(name, True, (0, 0, 0))
-        canvas.blit(surf, rect)
-        canvas.blit(text, text_rect)
-        # sizing up the canvas to he screen 
-        scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
-        scaled_canvas = pygame.transform.scale(screen, (LOGICAL_X * scale, LOGICAL_Y * scale))
-        offset_x = (screen_x - LOGICAL_X * scale) // 2
-        offset_y = (screen_y - LOGICAL_Y * scale) // 2
-        screen.blit(scaled_canvas, (offset_x, offset_y))
-        pygame.display.flip()
+    def change_user(self, size, user, prev_user):
 
-def get_scaled_mouse_pos(screen_x, screen_y): # scales mouse position
+        if size == (6, 5):
+            size = "small"
+        elif size == (10, 7):
+            size = "medium"
+        elif size == (16, 11):
+            size = "large"
+        else:
+            size = "custom"
+        
+        # checks if score is valid
+        if prev_user in self._leaderboard[size]:     
+            self._leaderboard[size][user] = self._leaderboard[size][prev_user]
+            del self._leaderboard[size][prev_user]
+            self.write_json(self._filename, self._leaderboard)
+
+def get_scaled_mouse_pos(screen_x, screen_y): 
+    """Scales mouse position"""
     scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
 
     offset_x = (screen_x - LOGICAL_X * scale) // 2
@@ -333,25 +416,45 @@ def get_scaled_mouse_pos(screen_x, screen_y): # scales mouse position
         (my - offset_y) / scale
     )
 
-def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, player, screen_x, screen_y): # menu loop containing options to play edit settings or qiot the game
-    global main_running
+def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, username, screen_x, screen_y, score): 
+    """menu loop containing options to play edit settings or qiot the game"""
+    global main_running # this is global to use as a cascading exit
+    global username_set
+    global change
+    global name
+    change = True
+
     def play():
         (cx, cy) = settings.get_size()
         screen.fill((0, 0, 0))
         game_canvas = pygame.Surface((cx * cell_width, cy * cell_height))
-        main_game_loop(game_canvas, screen, cx, cy, player, score, screen_x, screen_y)
+        main_game_loop(game_canvas, screen, cx, cy, username, score, screen_x, screen_y)
 
     def open_settings():
         settings_menu(canvas, screen, settings, screen_x, screen_y)
 
     def open_leaderboard():
         leaderboard.read_leaderboard()
-        leaderboard_menu(canvas, screen, leaderboard, screen_x, screen_y)
+        leaderboard_menu(canvas, screen, leaderboard, screen_x, screen_y, score)
 
     def quit_game():
         global main_running
         main_running = False
         print("bye bye")
+
+    def change_username():
+        global username_set
+        global change
+        username_set = True
+        change = False
+
+    def change_user():
+        global username_set
+        global change
+        global name
+        username_set = True
+        change = True
+        name = ""
 
     button_list = [
         Button(count=3, pos_index=1, font=font, text='Play', screen=canvas, state="link", func=play),
@@ -360,11 +463,28 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, play
         Button(x=170, y=40, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20),
                text="Leader Board", screen=canvas, state="link", func=open_leaderboard),
         Button(x=canvas.get_width() - 170, y=40, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20),
-               text="change user", screen=canvas, state="link", func=get_username),
+               text="change username", screen=canvas, state="link", func=change_username),
+        Button(x=canvas.get_width() - 170, y=100, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20),
+               text="change user", screen=canvas, state="link", func=change_user),
     ]
 
-    if player == None:
-        get_username(screen, screen_x, screen_y)
+    name = ""
+    user_font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
+    dis_font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 40)
+    dis_text = dis_font.render('USERNAME:', True, (255, 255, 255))
+    text_rect = pygame.Rect((canvas.get_width()/2 - dis_text.get_width()/2), (canvas.get_height()/4 - dis_text.get_height()/2), 200, 50)
+    # the box for the username enter box
+    user_surf = pygame.Surface((200, 50), pygame.SRCALPHA)
+    user_surf.fill((255, 255, 255, 180))
+    user_rect = user_surf.get_rect(center=(canvas.get_width()/2, canvas.get_height()/2))
+    # text for user name enter box
+    user_text = user_font.render(name, True, (0, 0, 0))
+    user_text_rect = user_text.get_rect(center=user_rect.center)
+
+    username_text = user_font.render(username, True, (0, 0, 0))
+    info_font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 11)
+    info_text = info_font.render('Enter you prefered display name or press enter to runn as guest.\n\n        (Warning guest mode with not save highscore!)', True, (255, 255, 255))
+    info_rect = info_text.get_rect(center=(canvas.get_width()/2, canvas.get_height()/2 - info_text.get_height()*2))
     
     while main_running:
         mouse_pos = get_scaled_mouse_pos(screen_x, screen_y)
@@ -378,23 +498,51 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, play
                 else:
                     screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
             if event.type == pygame.MOUSEBUTTONDOWN:
-                for button in button_list:
-                    if button.pressed(mouse_pos):
-                        func = button.get_func()
-                        if func:
-                            func()
-
-                
+                if not username_set:
+                    for button in button_list:
+                        if button.pressed(mouse_pos):
+                            func = button.get_func()
+                            if func:
+                                func()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     main_running = False
-
+                if username_set:
+                    if event.key in INC:
+                        name = f"{name}{pygame.key.name(event.key)}"
+                    elif event.key == pygame.K_BACKSPACE:
+                        name = name[:-1]
+                    elif event.key == pygame.K_RETURN:
+                        username_set = False
+                        prev_user = username
+                        username = name
+                        user_font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 40)
+                        username_text = user_font.render(username, True, (255, 255, 255))
+                        if prev_user != None and not change:
+                            leaderboard.change_user(settings.get_size(), username, prev_user)
+                    elif event.key == pygame.K_ESCAPE:
+                        username_set = False
+                        username = None
 
         canvas.blit(bg_surf, bg_rect)
 
-        for button in button_list:
-            button.update(mouse_pos)
-            button.draw()
+        if username_set:
+            user_font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
+            username_text = user_font.render(username, True, (0, 0, 0))
+            user_text = user_font.render(name, True, (0, 0, 0))
+            user_text_rect = user_text.get_rect(center=user_rect.center)
+            if user_text_rect.w > user_surf.get_width():
+                user_surf = pygame.Surface((user_text_rect.w, 50), pygame.SRCALPHA)
+
+            canvas.blit(user_surf, user_rect)
+            canvas.blit(user_text, user_text_rect)
+            canvas.blit(dis_text, text_rect)
+            canvas.blit(info_text, info_rect)
+        else:
+            canvas.blit(username_text, (canvas.get_width()/2 - (username_text.get_width()/2), 40))
+            for button in button_list:
+                button.update(mouse_pos)
+                button.draw()
 
         scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
 
@@ -503,7 +651,7 @@ def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, 
             snake.check_rotation()       
 
             if snake.death_check():
-                leaderboard.write_leaderboard(score, settings.get_size(), screen, screen_x, screen_y)
+                leaderboard.write_leaderboard(score, settings.get_size(), username)
                 alive = False
 
         if snake.win_check():
@@ -603,7 +751,7 @@ def settings_menu(canvas, screen, settings, screen_x, screen_y): # displays sett
         pygame.display.flip()
         clock.tick(FPS)
 
-def leaderboard_menu(canvas, screen, leaderboard_obj, screen_x, screen_y): # displays the leaderboard
+def leaderboard_menu(canvas, screen, leaderboard_obj, screen_x, screen_y, score): # displays the leaderboard
     font_title = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 40)
     font_text = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 25)
     font_text_small = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 18)
@@ -679,45 +827,14 @@ if __name__ == "__main__": # game initialisation
     cell_cx, cell_cy = settings.get_size() # number of cells 
 
     clock = pygame.time.Clock()
-    FPS = 60 # runs game at 60 fps
 
     username = None
-    score = 0
-    EXC = [ # excluded items for input boxes
-        pygame.K_ESCAPE,
-        pygame.K_LSHIFT,
-        pygame.K_RSHIFT,
-        pygame.K_LCTRL,
-        pygame.K_RCTRL,
-        pygame.K_BACKSPACE,
-        pygame.K_LALT,
-        pygame.K_RALT,
-        pygame.K_TAB,
-        pygame.K_F1,
-        pygame.K_F2,
-        pygame.K_F3,
-        pygame.K_F4,
-        pygame.K_F5,
-        pygame.K_F6,
-        pygame.K_F7,
-        pygame.K_F8,
-        pygame.K_F9,
-        pygame.K_F10,
-        pygame.K_F11,
-        pygame.K_F12,
-        pygame.K_RETURN,
-        pygame.K_UP,
-        pygame.K_LEFT,
-        pygame.K_RIGHT,
-        pygame.K_DOWN,
-        pygame.K_CAPSLOCK,
-        pygame.K_LMETA,
-        pygame.K_SPACE,
-    ]
+    username_set = True
 
+    score = 0
+    
     cell_width, cell_height = 40, 40 # width and height of an idividual cell
 
-    LOGICAL_X, LOGICAL_Y = pygame.display.Info().current_w/1.5, (pygame.display.Info().current_h-30)/1.5 # logical screen size this is what the game sees
     screen_x, screen_y = pygame.display.Info().current_w, pygame.display.Info().current_h - 30 # real screen size this is what is displayed
 
     font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 75)
@@ -742,7 +859,7 @@ if __name__ == "__main__": # game initialisation
     bg_rect = bg_surf.get_rect(center=(canvas.get_width()/2, canvas.get_height()/2))
 
     main_running = True # making this global to enable cascading exit
-    main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, username, screen_x, screen_y) # start the program
+    main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, username, screen_x, screen_y, score) # start the program
     debug.dprint(1, "game quitting")
 
 pygame.quit()
