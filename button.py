@@ -2,19 +2,18 @@ import pygame
 import math
 
 class Button():
-    def __init__(self, font=None, text="", screen=None, state="link", func=None, options=None, index=0, count=None, pos_index=None, x=0, y=0):
+    DEFAULT_TEXT_COLOR = (255, 255, 255)
+    DEFAULT_BG_COLOR = (200, 200, 200, 150)
+    BORDER_WIDTH, BORDER_HEIGHT = 35, 20
+    def __init__(self, font=None, text="", screen=None, state="link", func=None, options=None, index=0, count=None, pos_index=None, x=None, y=None):
         pygame.init()
+
         self._func = func
-        if count != None:
-            self._x = screen.get_width()/2
-            self._y = (2*pos_index)*(screen.get_height()/(((count+1)*2)))
-        else:
-            self._x = x
-            self._y = y
         self._screen = screen
         self._font = font
         self._text_input = text
         self._in_hovered = False
+        self._text = self._font.render(self._text_input, True, Button.DEFAULT_TEXT_COLOR)
 
         self._state = state
         self._index = index
@@ -25,8 +24,31 @@ class Button():
         if self._state == "multi":
             self.multi()
 
+        self._bg_width, self._bg_height = self._text.get_width() + Button.BORDER_WIDTH, self._text.get_height() + Button.BORDER_WIDTH
+
+        if count != None and index != None: # this needs fixing checks for valid x and y
+            self._x = self._screen.get_width()/2
+            self._y = (2*pos_index)*(self._screen.get_height()/(((count+1)*2)))
+
+        elif x != None and y != None:
+            if x > self._screen.get_width() - self._bg_width/2:
+                self._x = self._screen.get_width() - self._bg_width/2
+            elif x < self._bg_width/2:
+                self._x = self._bg_width/2
+            else:
+                self._x = x
+
+            if y > self._screen.get_height() - self._bg_height/2:
+                self._y = self._screen.get_height() - self._bg_height/2
+            elif y < self._bg_height:
+                self._y = self._bg_height/2
+            else:
+                self._y = y
+        else:
+            print("NO VALID POSITIONAL VARIABLES!")
+
         self._text_rect = self._text.get_rect(center=(self._x, self._y))
-        self._bg_surface = pygame.Surface((self._text_rect.width + 35, self._text_rect.height + 20), pygame.SRCALPHA)
+        self._bg_surface = pygame.Surface((self._bg_width, self._bg_height), pygame.SRCALPHA)
         self._bg_rect = self._bg_surface.get_rect(center=(self._x, self._y))
         self._draw_rect = self._bg_rect.copy()
 
@@ -56,16 +78,16 @@ class Button():
         self._draw_rect.center = (self._x, self._y + raw_bob * self._bob_intensity)
 
     def link(self):
-        self._text = self._font.render(self._text_input, True, (255, 255, 255))
+        self._text = self._font.render(self._text_input, True, Button.DEFAULT_TEXT_COLOR)
 
     def multi(self):
-        self._text = self._font.render(f"{self._text_input}: {self._options[self._index]}", True, (255, 255, 255))
+        self._text = self._font.render(f"{self._text_input}: {self._options[self._index]}", True, Button.DEFAULT_TEXT_COLOR)
 
     def draw(self):
         self.update(pygame.mouse.get_pos())
         self._bg_surface = pygame.Surface((self._draw_rect.width, self._draw_rect.height), pygame.SRCALPHA)
 
-        self._bg_surface.fill((200, 200, 200, 150))
+        self._bg_surface.fill(Button.DEFAULT_BG_COLOR)
         self._screen.blit(self._bg_surface, self._draw_rect)
 
         self._text_rect = self._text.get_rect(center=self._draw_rect.center)

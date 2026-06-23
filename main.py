@@ -14,8 +14,6 @@ debug.DEBUG_LEVEL = 0
 
 FPS = 60 # runs game at 60 fps
 
-LOGICAL_X, LOGICAL_Y = pygame.display.Info().current_w/1.5, (pygame.display.Info().current_h-30)/1.5 # logical screen size this is what the game sees
-
 EXC = [ # excluded items for input boxes
     pygame.K_ESCAPE,
     pygame.K_LSHIFT,
@@ -423,17 +421,25 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, user
     global change
     global name
     change = True
+    fc = 0
+
+    menu_channel.unpause()
 
     def play():
         (cx, cy) = settings.get_size()
         screen.fill((0, 0, 0))
         game_canvas = pygame.Surface((cx * cell_width, cy * cell_height))
+        start.play()
+        menu_channel.pause()
+        game_channel.unpause()
         main_game_loop(game_canvas, screen, cx, cy, username, score, screen_x, screen_y)
 
     def open_settings():
         settings_menu(canvas, screen, settings, screen_x, screen_y)
 
     def open_leaderboard():
+        menu_channel.pause()
+        leaderboard_channel.unpause()
         leaderboard.read_leaderboard()
         leaderboard_menu(canvas, screen, leaderboard, screen_x, screen_y, score)
 
@@ -462,7 +468,7 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, user
         Button(count=3, pos_index=3, font=font, text='Exit', screen=canvas, state="link", func=quit_game),
         Button(x=170, y=40, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20),
                text="Leader Board", screen=canvas, state="link", func=open_leaderboard),
-        Button(x=canvas.get_width() - 170, y=40, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20),
+        Button(x=canvas.get_width() + 170, y=40, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20),
                text="change username", screen=canvas, state="link", func=change_username),
         Button(x=canvas.get_width() - 170, y=100, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20),
                text="change user", screen=canvas, state="link", func=change_user),
@@ -487,10 +493,12 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, user
     info_rect = info_text.get_rect(center=(canvas.get_width()/2, canvas.get_height()/2 - info_text.get_height()*2))
     
     while main_running:
+        fc += 1
         mouse_pos = get_scaled_mouse_pos(screen_x, screen_y)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 main_running = False
+                pygame.quit()
             if event.type == pygame.VIDEORESIZE:
                 (screen_x, screen_y) = event.size 
                 if fullscreen:
@@ -498,6 +506,7 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, user
                 else:
                     screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
             if event.type == pygame.MOUSEBUTTONDOWN:
+                click.play()
                 if not username_set:
                     for button in button_list:
                         if button.pressed(mouse_pos):
@@ -505,11 +514,16 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, user
                             if func:
                                 func()
             if event.type == pygame.KEYDOWN:
+                key.play()
                 if event.key == pygame.K_ESCAPE:
                     main_running = False
                 if username_set:
+                    info_text = info_font.render('Enter you prefered display name or press enter to runn as guest.\n\n        (Warning guest mode with not save highscore!)', True, (255, 255, 255))
                     if event.key in INC:
-                        name = f"{name}{pygame.key.name(event.key)}"
+                        if len(name) <= 19:
+                            name = f"{name}{pygame.key.name(event.key)}"
+                        else:
+                            info_text = info_font.render('Warning: username is too long! maximum lenth is 20 characters', True, (255, 255, 255))
                     elif event.key == pygame.K_BACKSPACE:
                         name = name[:-1]
                     elif event.key == pygame.K_RETURN:
@@ -527,9 +541,12 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, user
         canvas.blit(bg_surf, bg_rect)
 
         if username_set:
+
             user_font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
-            username_text = user_font.render(username, True, (0, 0, 0))
-            user_text = user_font.render(name, True, (0, 0, 0))
+            if (fc // 20) % 2 == 0:
+                user_text = user_font.render(f'{name}|', True, (0, 0, 0))
+            else:
+                user_text = user_font.render(f'{name} ', True, (0, 0, 0))
             user_text_rect = user_text.get_rect(center=user_rect.center)
             if user_text_rect.w > user_surf.get_width():
                 user_surf = pygame.Surface((user_text_rect.w, 50), pygame.SRCALPHA)
@@ -590,6 +607,7 @@ def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, 
                 else:
                     screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
             if event.type == pygame.KEYDOWN:
+                key.play()
                 if event.key == pygame.K_ESCAPE:
                     alive = False
                     canvas = pygame.display.set_mode((LOGICAL_X, LOGICAL_Y))
@@ -652,6 +670,9 @@ def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, 
 
             if snake.death_check():
                 leaderboard.write_leaderboard(score, settings.get_size(), username)
+                die.play()
+                game_channel.pause()
+                menu_channel.unpause()
                 alive = False
 
         if snake.win_check():
@@ -714,6 +735,7 @@ def settings_menu(canvas, screen, settings, screen_x, screen_y): # displays sett
                 else:
                     screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
             if event.type == pygame.MOUSEBUTTONDOWN:
+                click.play()
                 size_index = size.pressed(mouse_pos)
                 speed_index = speed.pressed(mouse_pos)
                 apples_index = apples.pressed(mouse_pos)
@@ -772,7 +794,10 @@ def leaderboard_menu(canvas, screen, leaderboard_obj, screen_x, screen_y, score)
                 else:
                     screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
             if event.type == pygame.MOUSEBUTTONDOWN:
+                click.play()
                 if back_button.pressed(mouse_pos):
+                    leaderboard_channel.pause()
+                    menu_channel.unpause()
                     running = False
 
         canvas.fill((20, 20, 20))
@@ -823,6 +848,11 @@ if __name__ == "__main__": # game initialisation
     os.environ['SDL_VIDEO_WINDOW_POS'] = "0,30" # window positioning at (x=0, y=30)
 
     pygame.init()
+    pygame.mixer.init()
+
+    # These constants are initialized here because they depend on pygame being initialized first
+    LOGICAL_X, LOGICAL_Y = pygame.display.Info().current_w/1.5, (pygame.display.Info().current_h-30)/1.5 # logical screen size this is what the game sees
+
     settings = Settings(filename="settings.json") # initiates settings class
     cell_cx, cell_cy = settings.get_size() # number of cells 
 
@@ -839,6 +869,28 @@ if __name__ == "__main__": # game initialisation
 
     font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 75)
 
+    #sound init
+    click = pygame.mixer.Sound('sounds/click.mp3')
+    die = pygame.mixer.Sound('sounds/die.mp3')
+    eat = pygame.mixer.Sound('sounds/eat.mp3')
+    golden = pygame.mixer.Sound('sounds/golden.mp3')
+    key = pygame.mixer.Sound('sounds/key.mp3')
+    start = pygame.mixer.Sound('sounds/start.mp3')
+
+    menu_music = pygame.mixer.Sound('music/menu_music.mp3')
+    game_music = pygame.mixer.Sound('music/game_music.mp3')
+    leaderboard_music = pygame.mixer.Sound('music/and now Im going to try to sing opera and Im going to do the best as I can.mp3')
+
+    menu_channel = pygame.mixer.Channel(0)
+    game_channel = pygame.mixer.Channel(1)
+    leaderboard_channel = pygame.mixer.Channel(2)
+
+    menu_channel.play(menu_music, loops=-1)
+    menu_channel.pause()
+    game_channel.play(game_music, loops=-1)
+    game_channel.pause()
+    leaderboard_channel.play(leaderboard_music, loops=-1)
+    leaderboard_channel.pause()
 
     pygame.display.set_caption('Snake game')
 
