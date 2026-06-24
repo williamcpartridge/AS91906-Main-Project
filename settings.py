@@ -27,6 +27,19 @@ MIN_APPLES = 1
 
 
 class Settings():
+    TEST_FILENAME = "test.json"
+    MIN_BRIGHTNESS = 0
+    MAX_BRIGHTNESS = 200
+    MIN_VOLUME = 0
+    MAX_VOLUME = 100
+    MAX_SIZE = (100, 100)
+    MIN_SIZE = (5, 5)
+    MAX_ACCROSS = 100
+    MIN_ACCROSS = 5
+    MAX_SPEED = 60
+    MIN_SPEED = 5
+    MAX_APPLES = 10
+    MIN_APPLES = 1
     # initialization:
     def __init__ (self, filename, reset=False): 
         self._filename = filename

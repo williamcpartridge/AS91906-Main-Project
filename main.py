@@ -63,6 +63,7 @@ INC = [
     pygame.K_q,
     pygame.K_w,
     pygame.K_r,
+    pygame.K_e,
     pygame.K_t,
     pygame.K_y,
     pygame.K_u,
@@ -267,7 +268,6 @@ class Apple():
         self._apple_count = apple_count
         self._canvas = canvas
         self._apple_images = ImageList("images\\apple\\apple", cell_width, cell_height)
-        print(self._apple_images)
         self._upgrades = {"Golden": (True, 1), "Boost": (True, 2)}
         self._type_list = []
 
@@ -304,7 +304,6 @@ class Apple():
         for upgrade in self._upgrades.keys():
             if self._upgrades[upgrade][0]:
                 if random.randint(1, 5) == 5:
-                    print(upgrade)
                     return upgrade
         return "Normal"
     
@@ -431,26 +430,31 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, user
         game_canvas = pygame.Surface((cx * cell_width, cy * cell_height))
         start.play()
         menu_channel.pause()
+        game_channel.play(game_music, loops=-1)
         game_channel.unpause()
         main_game_loop(game_canvas, screen, cx, cy, username, score, screen_x, screen_y)
 
     def open_settings():
-        settings_menu(canvas, screen, settings, screen_x, screen_y)
+        click.play()
+        settings_menu(canvas, screen, screen_x, screen_y)
 
     def open_leaderboard():
         menu_channel.pause()
         leaderboard_channel.unpause()
         leaderboard.read_leaderboard()
+        click.play()
         leaderboard_menu(canvas, screen, leaderboard, screen_x, screen_y, score)
 
     def quit_game():
         global main_running
         main_running = False
+        exit.play()
         print("bye bye")
 
     def change_username():
         global username_set
         global change
+        click.play()
         username_set = True
         change = False
 
@@ -458,6 +462,7 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, user
         global username_set
         global change
         global name
+        click.play()
         username_set = True
         change = True
         name = ""
@@ -506,7 +511,6 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, user
                 else:
                     screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
             if event.type == pygame.MOUSEBUTTONDOWN:
-                click.play()
                 if not username_set:
                     for button in button_list:
                         if button.pressed(mouse_pos):
@@ -607,25 +611,29 @@ def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, 
                 else:
                     screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
             if event.type == pygame.KEYDOWN:
-                key.play()
                 if event.key == pygame.K_ESCAPE:
+                    exit.play()
                     alive = False
                     canvas = pygame.display.set_mode((LOGICAL_X, LOGICAL_Y))
                 if input_num == 0:
                     if event.key == pygame.K_w or event.key == pygame.K_UP:
                         if movement[0][2] != 180 and movement[0][2] != 0:
+                            turn.play()
                             snake.set_movement(0, -1, 0)
                             input_num = 1
                     if event.key == pygame.K_s or event.key == pygame.K_DOWN:
                         if movement[0][2] != 180 and movement[0][2] != 0:
+                            turn.play()
                             snake.set_movement(0, 1, 180)
                             input_num = 1
                     if event.key == pygame.K_d or event.key == pygame.K_RIGHT:
                         if movement[0][2] != 270 and movement[0][2] != 90:
+                            turn.play()
                             snake.set_movement(1, 0, 270)
                             input_num = 1
                     if event.key == pygame.K_a or event.key == pygame.K_LEFT:
                         if movement[0][2] != 270 and movement[0][2] != 90:
+                            turn.play()
                             snake.set_movement(-1, 0, 90)
                             input_num = 1
         
@@ -652,18 +660,18 @@ def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, 
                     new = snake.new_seg()
                     eaten = True
 
-                    print(i)
-                    print(upgrade)
-
                     if upgrade != "Normal":
                         if upgrade == "Golden":
+                            golden.play()
                             score += 5
 
                         elif upgrade == "Boost":
+                            boost.play()
                             speed = 10
                             time = 30
 
                     else:
+                        normal.play()
                         score += 1
             
             snake.check_rotation()       
@@ -701,24 +709,32 @@ def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, 
         pygame.display.flip()
         clock.tick(FPS)
 
-def settings_menu(canvas, screen, settings, screen_x, screen_y): # displays settings that you can edit
+def settings_menu(canvas, screen, screen_x, screen_y): # displays settings that you can edit
     global main_running
     settings.read_settings()
     font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', int(LOGICAL_X/20))
-    sizes_button = ["Small", "Medium", "Large"]
+    sizes_button = ["Small", "Medium", "Large", "Custom"]
     sizes_game = [(6, 5), (10, 7), (16, 11)]
     speed_button = ["slow", "medium", "fast"]
     speed_game = [30, 20, 10]
     apples_button = ["1", "3", "5", "10"]
     apples_game = [1, 3, 5, 10]
 
-    size_index = sizes_game.index(settings.get_size())
+    key = None
+    width_val, height_val = settings.get_size()
+
+    if settings.get_size() in sizes_game:
+        size_index = sizes_game.index(settings.get_size())
+    else:
+        size_index = 3
     speed_index = speed_game.index(settings.get_speed())
     apple_index = apples_game.index(settings.get_apple_count())
-    size = Button(count=4, pos_index=1, font=font, text='size', screen=canvas, state="multi", options=sizes_button, index=size_index)
-    speed = Button(count=4, pos_index=2, font=font, text="Speed", screen=canvas, state="multi", options=speed_button, index=speed_index)
-    apples = Button(count=4, pos_index=3, font=font, text="Apple count", screen=canvas, state="multi", options=apples_button, index=apple_index)
-    back = Button(count=4, pos_index=4, font=font, text="back", screen=canvas, state="link")
+    size = Button(count=5, pos_index=1, font=font, text='size', screen=canvas, state="multi", options=sizes_button, index=size_index)
+    speed = Button(count=5, pos_index=3, font=font, text="Speed", screen=canvas, state="multi", options=speed_button, index=speed_index)
+    apples = Button(count=5, pos_index=4, font=font, text="Apple count", screen=canvas, state="multi", options=apples_button, index=apple_index)
+    back = Button(count=5, pos_index=5, font=font, text="back", screen=canvas, state="link")
+    width = Button(x=(canvas.get_width()/2)-100, count=5, pos_index=2, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14), text="Width: ", screen=canvas, state="input", value=width_val)
+    height = Button(x=(canvas.get_width()/2)+100, count=5, pos_index=2, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14), text="Height: ", screen=canvas, state="input", value=height_val)
     settings_open = True
 
     while settings_open:
@@ -739,13 +755,34 @@ def settings_menu(canvas, screen, settings, screen_x, screen_y): # displays sett
                 size_index = size.pressed(mouse_pos)
                 speed_index = speed.pressed(mouse_pos)
                 apples_index = apples.pressed(mouse_pos)
+                if not width.pressed(mouse_pos):
+                    width._input_active = False
+                if not height.pressed(mouse_pos):
+                    height._input_active = False
                 if back.pressed(mouse_pos):
-                    settings.size = sizes_game[size_index]
+                    exit.play()
+                    if size_index != 3:
+                        settings.size = sizes_game[size_index]
+                    else:
+                        if width._value > Settings.MAX_ACCROSS:
+                            width._value = Settings.MAX_ACCROSS
+                        elif width._value < Settings.MIN_ACCROSS:
+                            width._value = Settings.MIN_ACCROSS
+                        if height._value > Settings.MAX_ACCROSS:
+                            height._value = Settings.MAX_ACCROSS
+                        elif height._value < Settings.MIN_ACCROSS:
+                            height._value = Settings.MIN_ACCROSS
+                        settings.size = (width.get_val(), height.get_val())
                     settings.speed = speed_game[speed_index]
                     settings.apples = apples_game[apples_index]
                     settings.write_setting()
                     settings_open = False
-                
+            if size_index == 3:
+                if event.type == pygame.KEYDOWN:
+                    if event.unicode.isdigit():
+                        key = int(event.unicode)
+                    elif event.key == pygame.K_BACKSPACE:
+                        key = -1
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     settings_open = False
@@ -760,6 +797,13 @@ def settings_menu(canvas, screen, settings, screen_x, screen_y): # displays sett
         apples.draw()
         back.update(mouse_pos)
         back.draw()
+
+        if size_index == 3:
+            width.update(mouse_pos, num=key)
+            width.draw()
+            height.update(mouse_pos, num=key)
+            height.draw()
+            key = None
 
         scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
 
@@ -794,8 +838,8 @@ def leaderboard_menu(canvas, screen, leaderboard_obj, screen_x, screen_y, score)
                 else:
                     screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
             if event.type == pygame.MOUSEBUTTONDOWN:
-                click.play()
                 if back_button.pressed(mouse_pos):
+                    exit.play()
                     leaderboard_channel.pause()
                     menu_channel.unpause()
                     running = False
@@ -876,6 +920,11 @@ if __name__ == "__main__": # game initialisation
     golden = pygame.mixer.Sound('sounds/golden.mp3')
     key = pygame.mixer.Sound('sounds/key.mp3')
     start = pygame.mixer.Sound('sounds/start.mp3')
+    boost = pygame.mixer.Sound('sounds/boost.mp3')
+    exit = pygame.mixer.Sound('sounds/exit.mp3')
+    normal = pygame.mixer.Sound('sounds/normal.mp3')
+    level_up = pygame.mixer.Sound('sounds/level up.mp3')
+    turn = pygame.mixer.Sound('sounds/turn.mp3')
 
     menu_music = pygame.mixer.Sound('music/menu_music.mp3')
     game_music = pygame.mixer.Sound('music/game_music.mp3')
@@ -888,6 +937,7 @@ if __name__ == "__main__": # game initialisation
     menu_channel.play(menu_music, loops=-1)
     menu_channel.pause()
     game_channel.play(game_music, loops=-1)
+    game_channel.set_volume(0.5)
     game_channel.pause()
     leaderboard_channel.play(leaderboard_music, loops=-1)
     leaderboard_channel.pause()

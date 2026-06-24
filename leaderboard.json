@@ -7,21 +7,25 @@
     },
     "medium": {
         "willza": 68,
+        "w": 24,
         "taj": 23,
         "tai": 21,
         "dom": 17,
-        "jfjkdkj": 16,
-        "will": 14,
+        "soph": 17,
         "julzy": 10,
         "eli": 7,
-        "jay": 7,
-        "soph": 4,
-        "w": 0
+        "jay": 7
     },
     "large": {
         "willza": 174,
         "soph": 89,
         "dom": 59,
-        "taj": 29
+        "taj": 29,
+        "mum": 13
+    },
+    "custom": {
+        "fgh": 23,
+        "w": 5,
+        "y": 0
     }
 }

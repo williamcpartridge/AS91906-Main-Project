@@ -1,40 +1,517 @@
-import os
 import pygame
-import random
-from settings import Settings
-from button import Button
-from mysprite import MySprite
-from imagelist import ImageList
-from tilespawn import TileSpawn
+import math
+
+class BobbingButton:
+    def __init__(self, x, y, width, height, text="", base_color=(0, 150, 255), hover_color=(0, 255, 0)):
+        # 1. Geometry and State
+        self.base_rect = pygame.Rect(x, y, width, height)
+        self.draw_rect = self.base_rect.copy()
+        self.is_hovered = False
+        
+        # 2. Colors and Text
+        self.base_color = base_color
+        self.hover_color = hover_color
+        self.current_color = base_color
+        self.text = text
+        self.font = pygame.font.SysFont(None, 24)
+
+        # 3. Animation Variables
+        self.bob_intensity = 0.0
+        self.transition_speed = 0.1  # Higher = snaps faster, Lower = smoother
+        self.bob_range = 3          # Max pixels it moves up/down
+        self.bob_speed = 0.007        # Speed of the sine wave oscillation
+
+    def update(self, mouse_pos):
+        """Handles hover detection and smooth animation math."""
+        # Check hover state against the stationary base position
+        self.is_hovered = self.base_rect.collidepoint(mouse_pos)
+
+        # Linear Interpolation (Lerp) for smooth dampening
+        target_intensity = 1.0 if self.is_hovered else 0.0
+        self.bob_intensity += (target_intensity - self.bob_intensity) * self.transition_speed
+
+        # Reset draw rect to base, then apply the dampened sine wave offset
+        self.draw_rect = self.base_rect.copy()
+        ticks = pygame.time.get_ticks()
+        
+        raw_bob = math.sin(ticks * self.bob_speed) * self.bob_range
+        self.draw_rect.y += raw_bob * self.bob_intensity
+
+        # Smoothly blend the color based on animation intensity
+        self.current_color = (
+            int(self.base_color[0] + (self.hover_color[0] - self.base_color[0]) * self.bob_intensity),
+            int(self.base_color[1] + (self.hover_color[1] - self.base_color[1]) * self.bob_intensity),
+            int(self.base_color[2] + (self.hover_color[2] - self.base_color[2]) * self.bob_intensity)
+        )
+
+    def draw(self, surface):
+        """Renders the button and its centered text onto the screen."""
+        # Draw button body
+        pygame.draw.rect(surface, self.current_color, self.draw_rect)
+        
+        # Draw centered text (it will move smoothly with the button)
+        if self.text:
+            text_surf = self.font.render(self.text, True, (255, 255, 255))
+            text_rect = text_surf.get_rect(center=self.draw_rect.center)
+            surface.blit(text_surf, text_rect)
+
+    def handle_event(self, event):
+        """Returns True if the button is successfully clicked."""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.is_hovered:
+                return True
+        return False
+
+
+if __name__ == "__main__":
+    pygame.init()
+    screen = pygame.display.set_mode((500, 400))
+    clock = pygame.time.Clock()
+
+    # Instantiate multiple buttons easily
+    btn_start = BobbingButton(75, 175, 140, 50, "Start Game")
+    btn_quit = BobbingButton(285, 175, 140, 50, "Quit", base_color=(200, 50, 50), hover_color=(255, 100, 100))
+
+    buttons = [btn_start, btn_quit]
+
+    running = True
+    while running:
+        mouse_position = pygame.mouse.get_pos()
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                
+            # Handle clicks
+            if btn_start.handle_event(event):
+                print("Start Game Triggered!")
+            if btn_quit.handle_event(event):
+                print("Quit Triggered!")
+                running = False
+
+        # Update all buttons
+        for btn in buttons:
+            btn.update(mouse_position)
+
+        # Draw everything
+        screen.fill((30, 30, 30))
+        for btn in buttons:
+            btn.draw(screen)
+            
+        pygame.display.flip()
+        clock.tick(60)
+
+    pygame.quit()
+import pygame
+import math
+
+class Button():
+    DEFAULT_TEXT_COLOR = (255, 255, 255)
+    DEFAULT_BG_COLOR = (200, 200, 200, 150)
+    BORDER_WIDTH, BORDER_HEIGHT = 35, 20
+    def __init__(self, font=None, text="", screen=None, state="link", func=None, options=None, index=0, count=None, pos_index=None, x=None, y=None):
+        pygame.init()
+
+        self._func = func
+        self._screen = screen
+        self._font = font
+        self._text_input = text
+        self._in_hovered = False
+        self._text = self._font.render(self._text_input, True, Button.DEFAULT_TEXT_COLOR)
+
+        self._state = state
+        self._index = index
+        if options != None:
+            self._options = options
+        if self._state == "link":
+            self.link()
+        if self._state == "multi":
+            self.multi()
+
+        self._bg_width, self._bg_height = self._text.get_width() + Button.BORDER_WIDTH, self._text.get_height() + Button.BORDER_WIDTH
+
+        if count != None and index != None: # this needs fixing checks for valid x and y
+            self._x = self._screen.get_width()/2
+            self._y = (2*pos_index)*(self._screen.get_height()/(((count+1)*2)))
+
+        elif x != None and y != None:
+            if x > self._screen.get_width() - self._bg_width/2:
+                self._x = self._screen.get_width() - self._bg_width/2
+            elif x < self._bg_width/2:
+                self._x = self._bg_width/2
+            else:
+                self._x = x
+
+            if y > self._screen.get_height() - self._bg_height/2:
+                self._y = self._screen.get_height() - self._bg_height/2
+            elif y < self._bg_height:
+                self._y = self._bg_height/2
+            else:
+                self._y = y
+        else:
+            print("NO VALID POSITIONAL VARIABLES!")
+
+        self._text_rect = self._text.get_rect(center=(self._x, self._y))
+        self._bg_surface = pygame.Surface((self._bg_width, self._bg_height), pygame.SRCALPHA)
+        self._bg_rect = self._bg_surface.get_rect(center=(self._x, self._y))
+        self._draw_rect = self._bg_rect.copy()
+
+        self._bob_intensity = 0.0
+        self._transition_speed = 0.1
+        self._bob_range = 5    
+        self._bob_speed = 0.007     
+        
+    def get_func(self):
+        return self._func
+
+    def update(self, mouse_pos):
+        self._is_hovered = self._bg_rect.collidepoint(mouse_pos)
+
+        target_intensity = 1.0 if self._is_hovered else 0.0
+        self._bob_intensity += (target_intensity - self._bob_intensity) * self._transition_speed
+
+        ticks = pygame.time.get_ticks()
+        raw_bob = math.sin(ticks * self._bob_speed) * self._bob_range
+
+        scale = 1 + (0.08 * self._bob_intensity)
+
+        width = (self._text_rect.width + 35) * scale
+        height = (self._text_rect.height + 20) * scale
+
+        self._draw_rect = pygame.Rect(0, 0, width, height)
+        self._draw_rect.center = (self._x, self._y + raw_bob * self._bob_intensity)
+
+    def link(self):
+        self._text = self._font.render(self._text_input, True, Button.DEFAULT_TEXT_COLOR)
+
+    def multi(self):
+        self._text = self._font.render(f"{self._text_input}: {self._options[self._index]}", True, Button.DEFAULT_TEXT_COLOR)
+
+    def draw(self):
+        self.update(pygame.mouse.get_pos())
+        self._bg_surface = pygame.Surface((self._draw_rect.width, self._draw_rect.height), pygame.SRCALPHA)
+
+        self._bg_surface.fill(Button.DEFAULT_BG_COLOR)
+        self._screen.blit(self._bg_surface, self._draw_rect)
+
+        self._text_rect = self._text.get_rect(center=self._draw_rect.center)
+        self._screen.blit(self._text, self._text_rect)
+
+    def pressed(self, position):
+        rect = self._draw_rect
+
+        if self._state == "link":
+            return rect.collidepoint(position)
+
+        elif self._state == "multi":
+            if rect.collidepoint(position):
+
+                if self._index < len(self._options) - 1:
+                    self._index += 1
+                else:
+                    self._index = 0
+
+                self.multi()
+
+            return self._index
+            import pygame
+import math
+
+class Button():
+    DEFAULT_TEXT_COLOR = (255, 255, 255)
+    DEFAULT_BG_COLOR = (200, 200, 200, 150)
+    BORDER_WIDTH, BORDER_HEIGHT = 35, 20
+    def __init__(self, font=None, text="", screen=None, state="link", func=None, options=None, index=0, count=None, pos_index=None, x=None, y=None):
+        pygame.init()
+
+        self._func = func
+        self._screen = screen
+        self._font = font
+        self._text_input = text
+        self._in_hovered = False
+        self._text = self._font.render(self._text_input, True, Button.DEFAULT_TEXT_COLOR)
+
+        self._state = state
+        self._index = index
+        if options != None:
+            self._options = options
+        if self._state == "link":
+            self.link()
+        if self._state == "multi":
+            self.multi()
+
+        self._bg_width, self._bg_height = self._text.get_width() + Button.BORDER_WIDTH, self._text.get_height() + Button.BORDER_WIDTH
+
+        if count != None and index != None: # this needs fixing checks for valid x and y
+            self._x = self._screen.get_width()/2
+            self._y = (2*pos_index)*(self._screen.get_height()/(((count+1)*2)))
+
+        elif x != None and y != None:
+            if x > self._screen.get_width() - self._bg_width/2:
+                self._x = self._screen.get_width() - self._bg_width/2
+            elif x < self._bg_width/2:
+                self._x = self._bg_width/2
+            else:
+                self._x = x
+
+            if y > self._screen.get_height() - self._bg_height/2:
+                self._y = self._screen.get_height() - self._bg_height/2
+            elif y < self._bg_height:
+                self._y = self._bg_height/2
+            else:
+                self._y = y
+        else:
+            print("NO VALID POSITIONAL VARIABLES!")
+
+        self._text_rect = self._text.get_rect(center=(self._x, self._y))
+        self._bg_surface = pygame.Surface((self._bg_width, self._bg_height), pygame.SRCALPHA)
+        self._bg_rect = self._bg_surface.get_rect(center=(self._x, self._y))
+        self._draw_rect = self._bg_rect.copy()
+
+        self._bob_intensity = 0.0
+        self._transition_speed = 0.1
+        self._bob_range = 5    
+        self._bob_speed = 0.007     
+        
+    def get_func(self):
+        return self._func
+
+    def update(self, mouse_pos):
+        self._is_hovered = self._bg_rect.collidepoint(mouse_pos)
+
+        target_intensity = 1.0 if self._is_hovered else 0.0
+        self._bob_intensity += (target_intensity - self._bob_intensity) * self._transition_speed
+
+        ticks = pygame.time.get_ticks()
+        raw_bob = math.sin(ticks * self._bob_speed) * self._bob_range
+
+        scale = 1 + (0.08 * self._bob_intensity)
+
+        width = (self._text_rect.width + 35) * scale
+        height = (self._text_rect.height + 20) * scale
+
+        self._draw_rect = pygame.Rect(0, 0, width, height)
+        self._draw_rect.center = (self._x, self._y + raw_bob * self._bob_intensity)
+
+    def link(self):
+        self._text = self._font.render(self._text_input, True, Button.DEFAULT_TEXT_COLOR)
+
+    def multi(self):
+        self._text = self._font.render(f"{self._text_input}: {self._options[self._index]}", True, Button.DEFAULT_TEXT_COLOR)
+
+    def draw(self):
+        self.update(pygame.mouse.get_pos())
+        self._bg_surface = pygame.Surface((self._draw_rect.width, self._draw_rect.height), pygame.SRCALPHA)
+
+        self._bg_surface.fill(Button.DEFAULT_BG_COLOR)
+        self._screen.blit(self._bg_surface, self._draw_rect)
+
+        self._text_rect = self._text.get_rect(center=self._draw_rect.center)
+        self._screen.blit(self._text, self._text_rect)
+
+    def pressed(self, position):
+        rect = self._draw_rect
+
+        if self._state == "link":
+            return rect.collidepoint(position)
+
+        elif self._state == "multi":
+            if rect.collidepoint(position):
+
+                if self._index < len(self._options) - 1:
+                    self._index += 1
+                else:
+                    self._index = 0
+
+                self.multi()
+
+            return self._index
+            from os.path import exists
+import debug
+import pygame
+
+class ImageList():
+    def __init__(self, filename, width, height):
+        self._images = []
+        count = 0
+        while exists(filename+str(count)+'.png'):
+            image = pygame.image.load(filename+str(count)+'.png')
+            aspectratio = image.get_width() / image.get_height()
+            scaled = pygame.transform.scale(image, [width, height])
+            self._images.append(scaled)
+            count += 1
+
+    def get_images(self):
+        return self._images
+    
+    images = property(get_images, None, None)
+
+
+# TESTING
+debug.DEBUG_LEVEL = 2
+if __name__ == "__main__":
+    TEST_X = 100
+    TEST_Y = 100
+    TEST_W = 30
+    TEST_H = 30
+
+    image_obj = ImageList("images\\apple\\apple", 20, 20)
+    pygame.init()
+
+    my_rect = pygame.Rect(TEST_X, TEST_Y, TEST_W, TEST_H)
+
+    screen = pygame.display.set_mode((600, 400), pygame.RESIZABLE)
+    pygame.display.set_caption("Snake Game by Me")
+    quit_game = False
+    while not quit_game:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                quit_game = True
+
+        screen.blit(image_obj.images[0], my_rect)
+
+        pygame.display.flip()
+
+
+
+    pygame.quit()
+    quit()
+    # pylint: disable=no-member
+# pylint: disable=invalid-name
+import os # used for positioning the window at startup and faster file paths
 import json
+import random # for random apple positions and apple types
+import pygame # module that the game runs on
+from settings import Settings # settings class save/write
+from button import Button # button class handle button drawing and presses
+from mysprite import MySprite # sprite class handles drawing sprites and movement of entities
+from imagelist import ImageList # gets images of an object eg. snake
+from tilespawn import TileSpawn # draws the game board and updates cells that are altered
 import debug
 debug.DEBUG_LEVEL = 0
 
+FPS = 60 # runs game at 60 fps
+
+EXC = [ # excluded items for input boxes
+    pygame.K_ESCAPE,
+    pygame.K_LSHIFT,
+    pygame.K_RSHIFT,
+    pygame.K_LCTRL,
+    pygame.K_RCTRL,
+    pygame.K_BACKSPACE,
+    pygame.K_LALT,
+    pygame.K_RALT,
+    pygame.K_TAB,
+    pygame.K_F1,
+    pygame.K_F2,
+    pygame.K_F3,
+    pygame.K_F4,
+    pygame.K_F5,
+    pygame.K_F6,
+    pygame.K_F7,
+    pygame.K_F8,
+    pygame.K_F9,
+    pygame.K_F10,
+    pygame.K_F11,
+    pygame.K_F12,
+    pygame.K_RETURN,
+    pygame.K_UP,
+    pygame.K_LEFT,
+    pygame.K_RIGHT,
+    pygame.K_DOWN,
+    pygame.K_CAPSLOCK,
+    pygame.K_LMETA,
+    pygame.K_SPACE,
+    pygame.K_NUMLOCK,
+    pygame.K_NUMLOCKCLEAR,
+    pygame.K_DELETE,
+]
+
+INC = [
+    pygame.K_0,
+    pygame.K_1,
+    pygame.K_2,
+    pygame.K_3,
+    pygame.K_4,
+    pygame.K_5,
+    pygame.K_6,
+    pygame.K_7,
+    pygame.K_8,
+    pygame.K_9,
+    pygame.K_q,
+    pygame.K_w,
+    pygame.K_r,
+    pygame.K_t,
+    pygame.K_y,
+    pygame.K_u,
+    pygame.K_i,
+    pygame.K_o,
+    pygame.K_p,
+    pygame.K_a,
+    pygame.K_s,
+    pygame.K_d,
+    pygame.K_f,
+    pygame.K_g,
+    pygame.K_h,
+    pygame.K_j,
+    pygame.K_k,
+    pygame.K_l,
+    pygame.K_z,
+    pygame.K_x,
+    pygame.K_c,
+    pygame.K_v,
+    pygame.K_b,
+    pygame.K_n,
+    pygame.K_m,
+    pygame.KSCAN_APOSTROPHE,
+    pygame.K_EXCLAIM,
+    pygame.K_AT,
+    pygame.K_HASH,
+    pygame.K_DOLLAR,
+    pygame.K_PERCENT,
+    pygame.K_POWER,
+    pygame.K_ASTERISK,
+    pygame.K_RIGHTBRACKET,
+    pygame.K_LEFTBRACKET,
+    pygame.K_MINUS,
+    pygame.K_PLUS,
+    pygame.K_EQUALS,
+    pygame.K_UNDERSCORE,
+    pygame.K_GREATER,
+    pygame.K_LESS,
+    pygame.K_COMMA,
+    pygame.K_PERIOD,
+]
+
 class Snake():
-    def __init__(self, movement, cell_w, cell_h, cell_cx, cell_cy, dir_x, dir_y, angle, screen):
+    """Snake class handles snake movement and segment management"""
+    def __init__(self, movement, cell_w, cell_h, cell_cx, cell_cy, dir_x, dir_y, angle, canvas):
+        """initiating variables for the snake class"""
         self._movement = movement
         self._cell_w = cell_w
         self._cell_h = cell_h
         self._cell_cx = cell_cx
         self._cell_cy = cell_cy
-        self._screen = screen
+        self._canvas = canvas
         self._dir_x = dir_x
         self._dir_y = dir_y
         self._angle = angle
         self._add_segment = False
 
-        self._snake_head_img = ImageList("images\\snake\\head\\snake_head", cell_width, cell_height)
-        self._snake_body_img = ImageList("images\\snake\\body\\snake_body", cell_width, cell_height)
+        self._snake_head_img = ImageList("images\\snake\\head\\snake_head", cell_width, cell_height) # gets list of images for snake head
+        self._snake_body_img = ImageList("images\\snake\\body\\snake_body", cell_width, cell_height) # gets list of images for snake body
 
         snake_x = self._cell_w+(self._cell_w/2)
         snake_y = self._cell_h/2
-        self._segments = [MySprite(snake_x, snake_y, self._cell_w, self._cell_h, self._snake_head_img, self._screen, self._angle), \
-                MySprite(snake_x - self._cell_w, snake_y, self._cell_w, self._cell_h, self._snake_body_img, self._screen, self._angle)]
+        self._segments = [MySprite(snake_x, snake_y, self._cell_w, self._cell_h, self._snake_head_img, self._canvas, self._angle), \
+                MySprite(snake_x - self._cell_w, snake_y, self._cell_w, self._cell_h, self._snake_body_img, self._canvas, self._angle)] # creates starting list of snake segments with mysprite objects
 
-    def get_head_pos(self):
+    def get_head_pos(self): 
+        """returns the (x, y) position of the snakes head"""
         return (self._segments[0].get_x(), self._segments[0].get_y())
     
-    def get_cell_poss(self):
+    def get_cell_poss(self): 
+        """get the cell that each snake segment is in"""
         temp = []
         for seg in self._segments:
             temp.append((self.get_cell_x(seg.get_x()), self.get_cell_y(seg.get_y())))
@@ -42,46 +519,55 @@ class Snake():
         return temp
 
     def get_cell_x(self, x):
+        """get the x position of a snake seg"""
         return int(x/self._cell_w)
 
     def get_cell_y(self, y):
+        """get the y position of a snake seg"""
         return int(y/self._cell_h)
     
-    def set_dir_x(self, dir_x):
+    def set_dir_x(self, dir_x): 
+        """set the x part of the direction vector for the snake"""
         self._dir_x = dir_x
     
     def get_dir_x(self):
+        """get the x part of the direction vector of the snake"""
         return self._dir_x
 
     def set_dir_y(self, dir_y):
+        """set the y part of the direction vector for the snake"""
         self._dir_y = dir_y
 
     def get_dir_y(self):
+        """get the y part of the direction vector of the snake"""
         return self._dir_y
 
     def set_angle(self, angle):
+        """sets the direction the snake sprites are pointing"""
         self._angle = angle
 
     def get_angle(self):
+        """gets the direction the snake sprites are pointing"""
         return self._angle
 
     def set_movement(self, dir_x, dir_y, angle):
+        """sets the direction vector and angle of the snake"""
         self.set_dir_x(dir_x)
         self.set_dir_y(dir_y)
         self.set_angle(angle)
 
-    def get_movement(self):
+    def get_movement(self): # gets the direction vector and angle of the snake
         return (self.get_dir_x(), self.get_dir_y(), self.get_angle())
 
-    def step(self):
-        tiles.tile(self._segments[-2].get_x(), self._segments[-2].get_y())
+    def step(self): # handles what happens when the snake steps forward
+        tiles.tile(self._segments[-2].get_x(), self._segments[-2].get_y()) # replaces the tiles that have been affected
         tiles.tile(self._segments[-1].get_x(), self._segments[-1].get_y())
         tiles.tile(self._segments[0].get_x(), self._segments[0].get_y())
 
         self._movement.insert(0, self.get_movement())
-        if len(self._movement) > len(self._segments):
+        if len(self._movement) > len(self._segments): # removes last segment
             self._movement.pop()
-        for i in range(len(self._segments)):
+        for i in range(len(self._segments)): # sets the rotation of the snake segments
             if i == len(self._segments) -1:
                 self._segments[i].rotate(self._movement[i-1][2])
             else:
@@ -89,24 +575,24 @@ class Snake():
 
             self._segments[i].move(self._cell_w*self._movement[i][0], self._cell_h*self._movement[i][1])
 
-    def cell_collide(self, obj):
+    def cell_collide(self, obj): # checks for collision with another object
         if self.get_cell_x(self._segments[0].get_x()) == self.get_cell_x(obj.get_x()) and \
             self.get_cell_y(self._segments[0].get_y()) == self.get_cell_y(obj.get_y()):
             return True
 
-    def new_seg(self):
+    def new_seg(self): # creates and new snake segment to be added to the list
         new = MySprite(self._segments[-1].get_x() - self._movement[-1][0]*self._cell_w, \
                        self._segments[-1].get_y() - self._movement[-1][1]*self._cell_h, \
-                        self._cell_w, self._cell_h, self._snake_body_img, self._screen)
+                        self._cell_w, self._cell_h, self._snake_body_img, self._canvas)
         new.rotate(self._movement[-1][2])
         new.set_frame(0)
         return new
 
-    def append_seg(self, new):
+    def append_seg(self, new): # adds the new segment to the snake list
         self._segments.append(new)
         
 
-    def check_rotation(self):
+    def check_rotation(self): # handles the rotation of every snake segment
         for i in range(len(self._movement)):
             if i != 0 and len(self._segments) > 2 and i != len(self._movement)-1:
                 if self._movement[i][2] != self._movement[i-1][2]:
@@ -124,57 +610,59 @@ class Snake():
                 else:
                     self._segments[i].set_frame(1)
 
-    def death_check(self):
+    def death_check(self): # handles all death cases. collision with self, collision with wall
         for segment in self._segments:
             if segment != self._segments[0]:
                 if self.cell_collide(segment):
                     return True
             
-        if self._segments[0].get_x() < self._cell_w/2 or self._segments[0].get_x() > self._screen.get_width() - self._cell_w/2 or \
-            self._segments[0].get_y() < self._cell_h/2 or self._segments[0].get_y() > self._screen.get_height() - self._cell_h/2:
+        if self._segments[0].get_x() < self._cell_w/2 or self._segments[0].get_x() > self._canvas.get_width() - self._cell_w/2 or \
+            self._segments[0].get_y() < self._cell_h/2 or self._segments[0].get_y() > self._canvas.get_height() - self._cell_h/2:
             return True
         
-    def start(self):
+    def start(self): # starts the movement of the first snake segments
         for segment in self._segments:
             segment.move(cell_width, 0, 0.1)
 
-    def win_check(self):
+    def win_check(self): # checks if the player has filled the game board
         if len(self._segments) == self._cell_cx*self._cell_cy:
             return True
         else:
             return False
 
-    def draw(self):
+    def draw(self): # draws each snake segment to the screen
         for seg in self._segments:
             seg.draw()
 
-class Apple():
-    def __init__(self, cell_w, cell_h, cell_cx, cell_cy, apple_count, screen):
+class Apple(): 
+    """Handles spwing apples and buffs for apple types"""
+    def __init__(self, cell_w, cell_h, cell_cx, cell_cy, apple_count, canvas):  # initiating variables for the apple class
         self._cell_w = cell_w
         self._cell_h = cell_h
         self._cell_cx = cell_cx
         self._cell_cy = cell_cy
         self._apple_list = []
         self._apple_count = apple_count
-        self._screen = screen
+        self._canvas = canvas
         self._apple_images = ImageList("images\\apple\\apple", cell_width, cell_height)
         print(self._apple_images)
         self._upgrades = {"Golden": (True, 1), "Boost": (True, 2)}
         self._type_list = []
 
 
-    def spawn_apple(self, snake_cells):
-        if len(self._apple_list) < self._apple_count and ((self._cell_cx*self._cell_cy) - len(snake_cells)) > self._apple_count:
+    def spawn_apple(self, snake_cells): # handles the spawning of the apples
+        if len(self._apple_list) < self._apple_count and ((self._cell_cx*self._cell_cy) - len(snake_cells)) > self._apple_count: # checks of an apples is needed
             done = False
-            while not done:
+            type = self.apple_type() # gets the type of apple (normal, golden, boost)
+            while not done: # choses random position for the apple
                 cell_x = random.randint(0, self._cell_cx - 1) 
                 cell_y = random.randint(0, self._cell_cy - 1)
                 done = True
             
-                if (cell_x, cell_y) in snake_cells:
+                if (cell_x, cell_y) in snake_cells: # checks if cell is occupied by snake
                     done = False
 
-                for a in self._apple_list:
+                for a in self._apple_list: # chekc if cell is occupied by apple
                     ax = int(a.get_x() / self._cell_w)
                     ay = int(a.get_y() / self._cell_h)
 
@@ -182,48 +670,52 @@ class Apple():
                         done = False
 
             debug.dprint(2, (cell_x, cell_y))
+            # adds the apple to the list
             ax = cell_x * self._cell_w + self._cell_w / 2
             ay = cell_y * self._cell_h + self._cell_h / 2
-            self._apple_list.append(MySprite(ax, ay, self._cell_w, self._cell_h, self._apple_images, self._screen))
-            self._type_list.append(self.apple_type())
+            self._apple_list.append(MySprite(ax, ay, self._cell_w, self._cell_h, self._apple_images, self._canvas))
+            self._type_list.append(type)
 
             #self._apple_list[-1].set_animation(0, 1, 1, False)
 
-    def apple_type(self):
+    def apple_type(self): # choses random apple type
         for upgrade in self._upgrades.keys():
-            if self._upgrades[upgrade]:
+            if self._upgrades[upgrade][0]:
                 if random.randint(1, 5) == 5:
                     print(upgrade)
                     return upgrade
         return "Normal"
     
-    def draw(self):
+    def draw(self): # draws all apples to the screen
         for i in range(len(self._apple_list)):
             if self._type_list[i] == "Normal":
                 self._apple_list[i].set_frame(0)
             else:
                 self._apple_list[i].set_frame(self._upgrades[self._type_list[i]][1])
-                print(self._upgrades[self._type_list[i]][1])
-            #self._apple_list[i].animate()
+
             self._apple_list[i].draw()
             
 
-    def get_apples(self):
+    def get_apples(self): # returns the list of apples on screen
         return self._apple_list
     
-    def rm(self, apple):
-        self._apple_list.remove(self._apple_list[apple])
+    def get_type(self): # returns every type in apple list
+        return self._type_list
+    
+    def rm(self, apple): # removes an apple from the apple sprites list and type list
+        self._apple_list.pop(apple)
+        self._type_list.pop(apple)
 
-class LeaderBoard():
-    def __init__(self, filename, screen):
+class LeaderBoard(): 
+    """handles the reading and writing to the leaderboard files"""
+    def __init__(self, filename, canvas):  # initiating variables for the leaderboard class
         self._filename = filename
         self._leaderboard = {}
         self.read_leaderboard()
-        self._username = None
-        self._screen = screen
+        self._canvas = canvas
 
-    def write_leaderboard(self, score, size):
-        
+    def write_leaderboard(self, score, size, username): # handles writing scores to the leaderboard
+        # checks for size/catagory
         if size == (6, 5):
             size = "small"
         elif size == (10, 7):
@@ -233,18 +725,17 @@ class LeaderBoard():
         else:
             size = "custom"
         
-        if self._username == None:
-            self.get_username()
-        if self._username != None:
-            if self._username in self._leaderboard[size]:     
-                if score > self._leaderboard[size][self._username]:
-                    self._leaderboard[size][self._username] = score
+        # checks if score is valid
+        if username != None and username != "":
+            if username in self._leaderboard[size]:     
+                if score > self._leaderboard[size][username]:
+                    self._leaderboard[size][username] = score
                     self.write_json(self._filename, self._leaderboard)
             else:
-                self._leaderboard[size][self._username] = score
+                self._leaderboard[size][username] = score
                 self.write_json(self._filename, self._leaderboard)
 
-    def write_json(self, filename, obj):
+    def write_json(self, filename, obj): # writes and sorts the scores to leaderboard file
         sorted_obj = {}
 
         for size, board in obj.items():
@@ -256,98 +747,205 @@ class LeaderBoard():
         debug.dprint(1, "Data written successfully")
         debug.dprint(1, sorted_obj)
 
-    def read_leaderboard(self):
+    def read_leaderboard(self): # gets the scores for the leaderboard
         self._leaderboard = self.json_read(self._filename)
 
-    def json_read(self, filename):
+    def json_read(self, filename): # reads the scores from the leaderboard file
         try:
             with open(filename, 'r') as f:
                 data = json.load(f)
                 debug.dprint(1, "Data read successfully:")
                 debug.dprint(1, data)
                 return data
-        except FileNotFoundError:
+        except FileNotFoundError: # ensures the game doesnt crash if the file does not exist
             print("No leaderboard file found, creating new one.")
             return {}
         
-    def get_username(self):
-        running = True
+    def change_user(self, size, user, prev_user):
+
+        if size == (6, 5):
+            size = "small"
+        elif size == (10, 7):
+            size = "medium"
+        elif size == (16, 11):
+            size = "large"
+        else:
+            size = "custom"
+        
+        # checks if score is valid
+        if prev_user in self._leaderboard[size]:     
+            self._leaderboard[size][user] = self._leaderboard[size][prev_user]
+            del self._leaderboard[size][prev_user]
+            self.write_json(self._filename, self._leaderboard)
+
+def get_scaled_mouse_pos(screen_x, screen_y): 
+    """Scales mouse position"""
+    scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
+
+    offset_x = (screen_x - LOGICAL_X * scale) // 2
+    offset_y = (screen_y - LOGICAL_Y * scale) // 2
+
+    mx, my = pygame.mouse.get_pos()
+
+    return (
+        (mx - offset_x) / scale,
+        (my - offset_y) / scale
+    )
+
+def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, username, screen_x, screen_y, score): 
+    """menu loop containing options to play edit settings or qiot the game"""
+    global main_running # this is global to use as a cascading exit
+    global username_set
+    global change
+    global name
+    change = True
+    fc = 0
+
+    def play():
+        (cx, cy) = settings.get_size()
+        screen.fill((0, 0, 0))
+        game_canvas = pygame.Surface((cx * cell_width, cy * cell_height))
+        main_game_loop(game_canvas, screen, cx, cy, username, score, screen_x, screen_y)
+
+    def open_settings():
+        settings_menu(canvas, screen, settings, screen_x, screen_y)
+
+    def open_leaderboard():
+        leaderboard.read_leaderboard()
+        leaderboard_menu(canvas, screen, leaderboard, screen_x, screen_y, score)
+
+    def quit_game():
+        global main_running
+        main_running = False
+        print("bye bye")
+
+    def change_username():
+        global username_set
+        global change
+        username_set = True
+        change = False
+
+    def change_user():
+        global username_set
+        global change
+        global name
+        username_set = True
+        change = True
         name = ""
-        font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
-        surf = pygame.Surface((200, 50), pygame.SRCALPHA)
-        surf.fill((255, 255, 255, 180))
-        rect = pygame.Rect((self._screen.get_width()/2)-100, (self._screen.get_height()/2)-50, 200, 50)
-        text = font.render(name, True, (0, 0, 0))
-        text_rect = text.get_rect(center=rect.center)
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    if event.key not in EXC:
-                        name = f"{name}{pygame.key.name(event.key)}"
+
+    button_list = [
+        Button(count=3, pos_index=1, font=font, text='Play', screen=canvas, state="link", func=play),
+        Button(count=3, pos_index=2, font=font, text='Settings', screen=canvas, state="link", func=open_settings),
+        Button(count=3, pos_index=3, font=font, text='Exit', screen=canvas, state="link", func=quit_game),
+        Button(x=170, y=40, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20),
+               text="Leader Board", screen=canvas, state="link", func=open_leaderboard),
+        Button(x=canvas.get_width() + 170, y=40, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20),
+               text="change username", screen=canvas, state="link", func=change_username),
+        Button(x=canvas.get_width() - 170, y=100, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20),
+               text="change user", screen=canvas, state="link", func=change_user),
+    ]
+
+    name = ""
+    user_font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
+    dis_font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 40)
+    dis_text = dis_font.render('USERNAME:', True, (255, 255, 255))
+    text_rect = pygame.Rect((canvas.get_width()/2 - dis_text.get_width()/2), (canvas.get_height()/4 - dis_text.get_height()/2), 200, 50)
+    # the box for the username enter box
+    user_surf = pygame.Surface((200, 50), pygame.SRCALPHA)
+    user_surf.fill((255, 255, 255, 180))
+    user_rect = user_surf.get_rect(center=(canvas.get_width()/2, canvas.get_height()/2))
+    # text for user name enter box
+    user_text = user_font.render(name, True, (0, 0, 0))
+    user_text_rect = user_text.get_rect(center=user_rect.center)
+
+    username_text = user_font.render(username, True, (0, 0, 0))
+    info_font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 11)
+    info_text = info_font.render('Enter you prefered display name or press enter to runn as guest.\n\n        (Warning guest mode with not save highscore!)', True, (255, 255, 255))
+    info_rect = info_text.get_rect(center=(canvas.get_width()/2, canvas.get_height()/2 - info_text.get_height()*2))
+    
+    while main_running:
+        fc += 1
+        mouse_pos = get_scaled_mouse_pos(screen_x, screen_y)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                main_running = False
+                pygame.quit()
+            if event.type == pygame.VIDEORESIZE:
+                (screen_x, screen_y) = event.size 
+                if fullscreen:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.FULLSCREEN)
+                else:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if not username_set:
+                    for button in button_list:
+                        if button.pressed(mouse_pos):
+                            func = button.get_func()
+                            if func:
+                                func()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    main_running = False
+                if username_set:
+                    info_text = info_font.render('Enter you prefered display name or press enter to runn as guest.\n\n        (Warning guest mode with not save highscore!)', True, (255, 255, 255))
+                    if event.key in INC:
+                        if len(name) <= 19:
+                            name = f"{name}{pygame.key.name(event.key)}"
+                        else:
+                            info_text = info_font.render('Warning: username is too long! maximum lenth is 20 characters', True, (255, 255, 255))
                     elif event.key == pygame.K_BACKSPACE:
                         name = name[:-1]
                     elif event.key == pygame.K_RETURN:
-                        running = False
-                        self._username = name
+                        username_set = False
+                        prev_user = username
+                        username = name
+                        user_font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 40)
+                        username_text = user_font.render(username, True, (255, 255, 255))
+                        if prev_user != None and not change:
+                            leaderboard.change_user(settings.get_size(), username, prev_user)
                     elif event.key == pygame.K_ESCAPE:
-                        running = False
-                        self._username = None
-                    
+                        username_set = False
+                        username = None
 
-            tiles.spawn_tiles(cell_cx, cell_cy)
-            text = font.render(name, True, (0, 0, 0))
-            self._screen.blit(surf, rect)
-            self._screen.blit(text, text_rect)
-            pygame.display.flip()
+        canvas.blit(bg_surf, bg_rect)
 
-def main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, cell_cy, settings, player):
-    play_button = Button(count=3, pos_index=1, font=font, text='Play', screen=screen, state="link")
-    settings_button = Button(count=3, pos_index=2, font=font, text='Settings', screen=screen, state="link")
-    leaderboard_button = Button(x=170, y=40, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20), text="Leader Board", screen=screen, state="link")
-    exit_button = Button(count=3, pos_index=3, font=font, text='Exit', screen=screen, state="link")
+        if username_set:
 
-    main = True
-    while main:
-        mouse_pos = pygame.mouse.get_pos()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                main = False
-                pygame.quit()
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if play_button.pressed(mouse_pos):
-                    (cell_cx, cell_cy) = settings.get_size()
+            user_font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
+            if (fc // 20) % 2 == 0:
+                user_text = user_font.render(f'{name}|', True, (0, 0, 0))
+            else:
+                user_text = user_font.render(f'{name} ', True, (0, 0, 0))
+            user_text_rect = user_text.get_rect(center=user_rect.center)
+            if user_text_rect.w > user_surf.get_width():
+                user_surf = pygame.Surface((user_text_rect.w, 50), pygame.SRCALPHA)
 
-                    screen = pygame.display.set_mode((cell_cx*cell_width, cell_cy*cell_height), pygame.FULLSCREEN | pygame.SCALED)
-                    screen.fill((0, 0, 0))
-                    main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, player, score)
-                if exit_button.pressed(mouse_pos):
-                    main = False
-                    print("bye bye")
-                    pygame.quit()
-                if settings_button.pressed(mouse_pos):
-                    settings_menu(settings)
-                if leaderboard_button.pressed(mouse_pos):
-                    leaderboard.read_leaderboard()
-                    leaderboard_menu(screen, leaderboard)
+            canvas.blit(user_surf, user_rect)
+            canvas.blit(user_text, user_text_rect)
+            canvas.blit(dis_text, text_rect)
+            canvas.blit(info_text, info_rect)
+        else:
+            canvas.blit(username_text, (canvas.get_width()/2 - (username_text.get_width()/2), 40))
+            for button in button_list:
+                button.update(mouse_pos)
+                button.draw()
 
-                
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    pygame.quit()
+        scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
 
+        scaled_canvas = pygame.transform.scale(canvas, (LOGICAL_X * scale, LOGICAL_Y * scale))
 
-        screen.blit(bg_surf, bg_rect)
-        play_button.draw()
-        leaderboard_button.draw()
-        exit_button.draw()
-        settings_button.draw()
+        offset_x = (screen_x - LOGICAL_X * scale) // 2
+        offset_y = (screen_y - LOGICAL_Y * scale) // 2
+
+        screen.blit(scaled_canvas, (offset_x, offset_y))
 
         pygame.display.flip()
         clock.tick(FPS)
 
-def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, username, score):
-
-    tiles.spawn_tiles(cell_cx, cell_cy)
+def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, screen_y): # game loop handles inputs and talks to snake and apple clases to run the game
+    global main_running
+    time = 0
+    tiles.spawn_tiles(cell_cx, cell_cy, canvas)
     alive = True
     fc = 0
     apple_count = settings.get_apple_count()
@@ -356,11 +954,11 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, usern
     eaten = False
     (cell_cx, cell_cy) = settings.get_size()
     speed = settings.get_speed()
-    snake = Snake(movement, cell_width, cell_height, cell_cx, cell_cy, dir_x=1, dir_y=0, angle=270, screen=screen)
-    apple = Apple(cell_width, cell_height, cell_cx, cell_cy, apple_count, screen)
+    snake = Snake(movement, cell_width, cell_height, cell_cx, cell_cy, dir_x=1, dir_y=0, angle=270, canvas=canvas)
+    apple = Apple(cell_width, cell_height, cell_cx, cell_cy, apple_count, canvas)
     font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
     score_text = font.render(str(score), True, (0, 0, 0))
-    score_rect = score_text.get_rect(center=(screen.get_width()/2, 20))
+    score_rect = score_text.get_rect(center=(canvas.get_width()/2, 20))
 
     while alive:
         apple.spawn_apple(snake.get_cell_poss())
@@ -370,11 +968,17 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, usern
         for event in pygame.event.get(): # movement inputs
             if event.type == pygame.QUIT:
                 alive = False
-                pygame.quit()
+                main_running = False
+            if event.type == pygame.VIDEORESIZE:
+                (screen_x, screen_y) = event.size 
+                if fullscreen:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.FULLSCREEN)
+                else:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     alive = False
-                    screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.FULLSCREEN | pygame.SCALED)
+                    canvas = pygame.display.set_mode((LOGICAL_X, LOGICAL_Y))
                 if input_num == 0:
                     if event.key == pygame.K_w or event.key == pygame.K_UP:
                         if movement[0][2] != 180 and movement[0][2] != 0:
@@ -397,41 +1001,75 @@ def main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, usern
             if eaten:
                 snake.append_seg(new)
                 eaten = False
-
+        
+            if time > 0 :
+                time -= 1
+            elif time == 0:
+                speed = settings.get_speed()
 
             snake.step()
 
             for apple_sprite in apple.get_apples():
                 if snake.cell_collide(apple_sprite):
-                    apple.rm(apple.get_apples().index(apple_sprite))
+                    i = apple.get_apples().index(apple_sprite)
+
+                    upgrade = apple.get_type()[i]
+
+                    apple.rm(i)
+
                     new = snake.new_seg()
-                    score += 1
                     eaten = True
+
+                    print(i)
+                    print(upgrade)
+
+                    if upgrade != "Normal":
+                        if upgrade == "Golden":
+                            score += 5
+
+                        elif upgrade == "Boost":
+                            speed = 10
+                            time = 30
+
+                    else:
+                        score += 1
             
             snake.check_rotation()       
 
             if snake.death_check():
-                leaderboard.write_leaderboard(score, settings.get_size())
-                screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.FULLSCREEN | pygame.SCALED)
+                leaderboard.write_leaderboard(score, settings.get_size(), username)
                 alive = False
 
         if snake.win_check():
             alive = False
-            main_game_loop(screen, menu_screen_x, menu_screen_y, cell_cx, cell_cy, username, score)
+            main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, screen_y)
 
 
-        tiles.tile(screen.get_width()/2, 0)
-        tiles.tile((screen.get_width()/2)-1, 0)
+        tiles.tile(canvas.get_width()/2, 0)
+        tiles.tile((canvas.get_width()/2)-1, 0)
         snake.draw()
         apple.draw()
-        screen.blit(font.render(str(score), True, (0, 0, 0)), score_rect)
+        canvas.blit(font.render(str(score), True, (0, 0, 0)), score_rect)
+
+        scale = min(screen_x / canvas.get_width(), screen_y / canvas.get_height())
+
+        scaled_w = int(canvas.get_width() * scale)
+        scaled_h = int(canvas.get_height() * scale)
+
+        scaled_canvas = pygame.transform.scale(canvas, (scaled_w, scaled_h))
+
+        offset_x = (screen_x - scaled_w) // 2
+        offset_y = (screen_y - scaled_h) // 2
+
+        screen.blit(scaled_canvas, (offset_x, offset_y))
 
         pygame.display.flip()
         clock.tick(FPS)
 
-def settings_menu(settings):
+def settings_menu(canvas, screen, settings, screen_x, screen_y): # displays settings that you can edit
+    global main_running
     settings.read_settings()
-    font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', int(menu_screen_x/20))
+    font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', int(LOGICAL_X/20))
     sizes_button = ["Small", "Medium", "Large"]
     sizes_game = [(6, 5), (10, 7), (16, 11)]
     speed_button = ["slow", "medium", "fast"]
@@ -442,18 +1080,25 @@ def settings_menu(settings):
     size_index = sizes_game.index(settings.get_size())
     speed_index = speed_game.index(settings.get_speed())
     apple_index = apples_game.index(settings.get_apple_count())
-    size = Button(count=4, pos_index=1, font=font, text='size', screen=screen, state="multi", options=sizes_button, index=size_index)
-    speed = Button(count=4, pos_index=2, font=font, text="Speed", screen=screen, state="multi", options=speed_button, index=speed_index)
-    apples = Button(count=4, pos_index=3, font=font, text="Apple count", screen=screen, state="multi", options=apples_button, index=apple_index)
-    back = Button(count=4, pos_index=4, font=font, text="back", screen=screen, state="link")
+    size = Button(count=4, pos_index=1, font=font, text='size', screen=canvas, state="multi", options=sizes_button, index=size_index)
+    speed = Button(count=4, pos_index=2, font=font, text="Speed", screen=canvas, state="multi", options=speed_button, index=speed_index)
+    apples = Button(count=4, pos_index=3, font=font, text="Apple count", screen=canvas, state="multi", options=apples_button, index=apple_index)
+    back = Button(count=4, pos_index=4, font=font, text="back", screen=canvas, state="link")
     settings_open = True
 
     while settings_open:
-        mouse_pos = pygame.mouse.get_pos()
+        mouse_pos = get_scaled_mouse_pos(screen_x, screen_y)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
+                settings_open = False
+                main_running = False
+            if event.type == pygame.VIDEORESIZE:
+                (screen_x, screen_y) = event.size 
+                if fullscreen:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.FULLSCREEN)
+                else:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
             if event.type == pygame.MOUSEBUTTONDOWN:
                 size_index = size.pressed(mouse_pos)
                 speed_index = speed.pressed(mouse_pos)
@@ -467,43 +1112,59 @@ def settings_menu(settings):
                 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    pygame.quit()
+                    settings_open = False
                 
-        screen.blit(bg_surf, bg_rect)
+        canvas.blit(bg_surf, bg_rect)
 
+        size.update(mouse_pos)  
         size.draw()
+        speed.update(mouse_pos)
         speed.draw()
+        apples.update(mouse_pos)
         apples.draw()
+        back.update(mouse_pos)
         back.draw()
+
+        scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
+
+        scaled_canvas = pygame.transform.scale(canvas, (LOGICAL_X * scale, LOGICAL_Y * scale))
+
+        offset_x = (screen_x - LOGICAL_X * scale) / 2
+        offset_y = (screen_y - LOGICAL_Y * scale) / 2
+
+        screen.blit(scaled_canvas, (offset_x, offset_y))
 
         pygame.display.flip()
         clock.tick(FPS)
 
-def leaderboard_menu(screen, leaderboard_obj):
+def leaderboard_menu(canvas, screen, leaderboard_obj, screen_x, screen_y, score): # displays the leaderboard
     font_title = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 40)
     font_text = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 25)
     font_text_small = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 18)
     font_back = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 30)
 
-    back_button = Button(y=screen.get_height()-70, x=screen.get_width()/2, pos_index=1, font=font_back, text="Back", screen=screen, state="link")
+    back_button = Button(y=canvas.get_height()-70, x=canvas.get_width()/2, pos_index=1, font=font_back, text="Back", screen=canvas, state="link")
 
     running = True
     while running:
-        mouse_pos = pygame.mouse.get_pos()
-
+        mouse_pos = get_scaled_mouse_pos(screen_x, screen_y)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-                return
-
+                running = False
+            if event.type == pygame.VIDEORESIZE:
+                (screen_x, screen_y) = event.size 
+                if fullscreen:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.FULLSCREEN)
+                else:
+                    screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if back_button.pressed(mouse_pos):
                     running = False
 
-        screen.fill((20, 20, 20))
+        canvas.fill((20, 20, 20))
 
         title = font_title.render("LEADERBOARD", True, (255, 255, 255))
-        screen.blit(title, (screen.get_width()//2 - title.get_width()//2, 20))
+        canvas.blit(title, (canvas.get_width()//2 - title.get_width()//2, 20))
 
         y_offset = 120
         x_offset = 0
@@ -512,18 +1173,18 @@ def leaderboard_menu(screen, leaderboard_obj):
 
         if not data:
             empty = font_text.render("No scores yet", True, (200, 200, 200))
-            screen.blit(empty, (screen.get_width()//2 - empty.get_width()//2, y_offset))
+            canvas.blit(empty, (canvas.get_width()//2 - empty.get_width()//2, y_offset))
 
         else:
             for size in ["small", "medium", "large", "custom"]:
                 if size in data:
                     header = font_text.render(size.upper(), True, (255, 200, 100))
-                    screen.blit(header, (60+x_offset, y_offset))
+                    canvas.blit(header, (60+x_offset, y_offset))
                     y_offset += 40
 
                     for i, (player, score) in enumerate(data[size].items()):
                         text = font_text_small.render(f"{i+1}. {player} - {score}", True, (255, 255, 255))
-                        screen.blit(text, (80+x_offset, y_offset))
+                        canvas.blit(text, (80+x_offset, y_offset))
                         y_offset += 30
 
                     y_offset = 120
@@ -532,172 +1193,247 @@ def leaderboard_menu(screen, leaderboard_obj):
         back_button.update(mouse_pos)
         back_button.draw()
 
+        scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
+
+        scaled_canvas = pygame.transform.scale(canvas, (LOGICAL_X * scale, LOGICAL_Y * scale))
+
+        offset_x = (screen_x - LOGICAL_X * scale) // 2
+        offset_y = (screen_y - LOGICAL_Y * scale) // 2
+
+        screen.blit(scaled_canvas, (offset_x, offset_y))
+
         pygame.display.flip()
         clock.tick(FPS)
 
-if __name__ == "__main__":
-    os.environ['SDL_VIDEO_WINDOW_POS'] = "0,30"
+if __name__ == "__main__": # game initialisation
+    os.environ['SDL_VIDEO_WINDOW_POS'] = "0,30" # window positioning at (x=0, y=30)
+
     pygame.init()
-    settings = Settings(filename="settings.json")
-    cell_cx, cell_cy = settings.get_size()
+
+    # These constants are initialized here because they depend on pygame being initialized first
+    LOGICAL_X, LOGICAL_Y = pygame.display.Info().current_w/1.5, (pygame.display.Info().current_h-30)/1.5 # logical screen size this is what the game sees
+
+    settings = Settings(filename="settings.json") # initiates settings class
+    cell_cx, cell_cy = settings.get_size() # number of cells 
 
     clock = pygame.time.Clock()
-    FPS = 60
 
     username = None
+    username_set = True
+
     score = 0
-    EXC = [
-        pygame.K_ESCAPE,
-        pygame.K_LSHIFT,
-        pygame.K_RSHIFT,
-        pygame.K_LCTRL,
-        pygame.K_RCTRL,
-        pygame.K_BACKSPACE,
-        pygame.K_LALT,
-        pygame.K_RALT,
-        pygame.K_TAB,
-        pygame.K_F1,
-        pygame.K_F2,
-        pygame.K_F3,
-        pygame.K_F4,
-        pygame.K_F5,
-        pygame.K_F6,
-        pygame.K_F7,
-        pygame.K_F8,
-        pygame.K_F9,
-        pygame.K_F10,
-        pygame.K_F11,
-        pygame.K_F12,
-        pygame.K_RETURN,
-        pygame.K_UP,
-        pygame.K_LEFT,
-        pygame.K_RIGHT,
-        pygame.K_DOWN,
-        pygame.K_CAPSLOCK,
-        pygame.K_LMETA,
-        pygame.K_SPACE,
-    ]
+    
+    cell_width, cell_height = 40, 40 # width and height of an idividual cell
 
-    UPGRADES = {"Golden Apple": False}
-
-    cell_width, cell_height = 40, 40
-
-    fullscreen = False
-
-    if fullscreen:
-        os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
-        if cell_cx > cell_cy:
-            cell_width = pygame.display.Info().current_h / cell_cy
-            cell_height = pygame.display.Info().current_h / cell_cy
-        else:
-            cell_width = pygame.display.Info().current_w / cell_cx
-            cell_height = pygame.display.Info().current_w / cell_cx
-
-    scr_x=cell_width*cell_cx ; scr_y=cell_width*cell_cy
-
-    menu_screen_x, menu_screen_y = 1000, 700
+    screen_x, screen_y = pygame.display.Info().current_w, pygame.display.Info().current_h - 30 # real screen size this is what is displayed
 
     font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 75)
 
 
     pygame.display.set_caption('Snake game')
 
-    
-    screen = pygame.display.set_mode((menu_screen_x, menu_screen_y), pygame.FULLSCREEN | pygame.SCALED)
-    #screen = pygame.display.set_mode((pygame.display.Info().current_w, pygame.display.Info().current_h), pygame.SCALED)
-    #screen = pygame.display.set_mode((cell_cx*cell_width, cell_cy*cell_height), pygame.SCALED)
-    leaderboard = LeaderBoard("leaderboard.json", screen)
-    tiles = TileSpawn(cell_cx, cell_cy, cell_width, cell_height, screen)
+    canvas = pygame.Surface((LOGICAL_X, LOGICAL_Y)) # serface the game sees
 
-    bg_surf = pygame.transform.scale(pygame.image.load('images\\main_gui\\bg.jpg').convert_alpha(), (screen.get_width(), screen.get_height()))
-    bg_rect = bg_surf.get_rect(center=(screen.get_width()/2, screen.get_height()/2))
+    fullscreen = False
 
+    if fullscreen: # handles fullscreen or resizeable
+        os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
+        screen = pygame.display.set_mode((screen_x, screen_y), pygame.FULLSCREEN)
+    else:
+        screen = pygame.display.set_mode((screen_x, screen_y), pygame.RESIZABLE)
 
-    main_menu(screen, bg_surf, bg_rect, menu_screen_x, menu_screen_y, cell_cx, cell_cy, settings, username)
-    #main_game_loop(screen)
-    #spawn_tiles()
+    leaderboard = LeaderBoard("leaderboard.json", canvas) # initiates the leaderboard class
+    tiles = TileSpawn(cell_cx, cell_cy, cell_width, cell_height, canvas) # initiates the TileSpawn class 
+
+    bg_surf = pygame.transform.scale(pygame.image.load('images\\main_gui\\bg.jpg').convert_alpha(), (canvas.get_width(), canvas.get_height())) # creates and sizes the background image for main menu and settings
+    bg_rect = bg_surf.get_rect(center=(canvas.get_width()/2, canvas.get_height()/2))
+
+    main_running = True # making this global to enable cascading exit
+    main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, username, screen_x, screen_y, score) # start the program
     debug.dprint(1, "game quitting")
 
 pygame.quit()
 import pygame
+from imagelist import ImageList
+import debug
+import time
 
-class TileSpawn():
-    def __init__(self, cell_count_x, cell_count_y, cell_width, cell_height, screen):
-        if cell_count_x >= 0:
-            self._cell_count_x = cell_count_x
-        if cell_count_y >= 0:
-            self._cell_count_y = cell_count_y
+TEST_X = 100
+TEST_Y = 100
+TEST_W = 30
+TEST_H = 30
 
-        if cell_width > 0:
-            self._cell_width = cell_width
-        if cell_height > 0:
-            self._cell_height = cell_height
-
-        if isinstance(screen, pygame.Surface):
-            self._screen = screen
-
-        self._tile_surf = pygame.Surface((cell_width, cell_width))
-        self._LIGHT_GREEN = ((168, 230, 29))
-        self._DARK_GREEN = ((127, 173, 22))
-
-
-    def spawn_tiles(self, cell_cx, cell_cy):
-        self._cell_count_x = cell_cx
-        self._cell_count_y = cell_cy
-        for x in range(self._cell_count_x):
-            for y in range(self._cell_count_y):
-                if y % 2 == 0:
-                    if x % 2 == 0:
-                        self._tile_surf.fill(self._LIGHT_GREEN)
-                    else:
-                        self._tile_surf.fill(self._DARK_GREEN)
-                else:
-                    if x % 2 == 0:
-                        self._tile_surf.fill(self._DARK_GREEN)
-                    else:
-                        self._tile_surf.fill(self._LIGHT_GREEN)
-                self._screen.blit(self._tile_surf, (x*self._cell_width, y*self._cell_height))
-
-    def tile(self, x, y):
-        x = int(x/self._cell_width)
-        y = int(y/self._cell_height)
-
-        if y % 2 == 0:
-            if x % 2 == 0:
-                self._tile_surf.fill(self._LIGHT_GREEN)
-            else:
-                self._tile_surf.fill(self._DARK_GREEN)
+class MySprite():
+    def __init__(self, x, y, w, h, images, canvas, angle=0):
+        valid = True
+        if x >= 0 and x <= canvas.get_width():
+            self._x = x
         else:
-            if x % 2 == 0:
-                self._tile_surf.fill(self._DARK_GREEN)
+            print("off screen (x)")
+            valid = False
+        if y >= 0 and y <= canvas.get_height():
+            self._y = y
+        else:
+            print("off screen (y)")
+            valid = False
+        if w > 0:
+            self._w = w
+        else: 
+            print("width too small")
+        if h > 0:
+            self._h = h
+        else: 
+            print("Hieght too small")
+        self._images = images
+
+        if angle >= 0 and angle <= 360:
+            self._angle = angle
+        else:
+            self._angle = 0
+
+        self._canvas = canvas
+        
+        self._start_frame = 0
+        self._end_frame = 0
+        self._current_frame = 0
+        self._delay = -1
+        self._repeat = False
+        self._next_move = time.time()
+        self._move_delay = 0
+        
+
+        if valid == False:
+            print("SOMTHING WENT WRONG\n    Parametres:", "\nx:", x, "\ny:", y, "\nwidth:", w, "\nheight:", h)
+            exit(0)
+
+    def get_x(self):
+        return self._x
+
+    def set_x(self, x):
+        if x >= 0 and x < self._canvas.get_width():
+            self._x = x
+        elif x < 0:
+            self._x = 0
+        else:
+            self._x = self._canvas.get_width()
+        
+    def get_y(self):
+        return self._y
+
+    def set_y(self, y):
+        if y >= 0 and y < self._canvas.get_height():
+            self._y = y
+        elif y < 0:
+            self._y = 0
+        else:
+            self._y = self._canvas.get_height() - 1
+
+    x = property(get_x, set_x)
+    y = property(get_y, set_y)
+
+    def rotate(self, angle):
+        if angle >= 0 and angle <= 360:
+            self._angle = angle
+        else:
+            self._angle = 0
+
+    def set_pos(self, x, y):
+        self.set_x(x)
+        self.set_y(y)
+
+    def move(self, dx=None, dy=None, delay_move=None):
+        if not dx is None:
+            self._dx = dx
+        if not dy is None:
+            self._dy = dy
+        if not delay_move is None:
+            self._move_delay = delay_move
+            if not delay_move == self._move_delay:
+                self._next_move = time.time()
+
+        if time.time() > self._next_move:
+            self.set_x(self._x + self._dx)
+            self.set_y(self._y + self._dy)    
+            self._next_move += self._move_delay
+
+    def set_animation(self, start_frame=0, end_frame=0, delay=0, repeat=False):
+            if start_frame >= 0 and start_frame < len(self._images.images):
+                self._start_frame = start_frame
+            if end_frame >= 0 and end_frame < len(self._images.images) and start_frame <= end_frame:
+                self._end_frame = end_frame
+            if delay > 0:
+                self._delay = delay
+            if repeat:
+                self._repeat = True
             else:
-                self._tile_surf.fill(self._LIGHT_GREEN)
-        self._screen.blit(self._tile_surf, (x*self._cell_width, y*self._cell_height))
+                self._repeat = False
 
+
+            self._next_frame = time.time() + delay
+
+    def animate(self, reset_animation = False):
+        if not self._delay == -1:
+            if reset_animation == True:
+                self._current_frame = self._start_frame
+            else:
+                if time.time() > self._next_frame:
+                    if self._current_frame < self._end_frame:
+                        self._current_frame += 1
+                    elif self._repeat == True:
+                        self._current_frame = self._start_frame
+                    self._next_frame = self._next_frame + self._delay       
+
+    def set_frame(self, frame):
+        self._current_frame = frame
+            
+    def get_rect(self):
+        rect = pygame.Rect(0, 0, self._w, self._h)
+        rect.center = (self._x, self._y)
+        return rect
+
+    def collide(self, other_rect):
+        if isinstance(other_rect, pygame.Rect):
+            if not (self._y > other_rect.y + other_rect.h or self._x > other_rect.x + other_rect.w or self._x + self._w < other_rect.x or self._y + self._h < other_rect.y):
+                return True
+            else:
+                return False
+                
+    def draw(self):
+        self._canvas.blit(pygame.transform.rotate(self._images.images[self._current_frame], self._angle), self.get_rect())
+
+
+# TESTING
+debug.DEBUG_LEVEL = 2
 if __name__ == "__main__":
-    TEST_CX = 20
-    TEST_CY = 14
-    TEST_CW = 40
-    TEST_CH = 40
+    pygame.init()
+    screen = pygame.display.set_mode((640, 480), pygame.RESIZABLE)
+    images = ImageList("images\\apple\\apple", TEST_W, TEST_H)
 
-    running = True
+    spritelist = []
+    spritelist.append(MySprite(TEST_X, TEST_Y, TEST_W, TEST_H, images, screen))
+    spritelist[-1].set_animation(0, 2, 1, True)
+    spritelist.append(MySprite(TEST_X + TEST_W, TEST_Y, TEST_W, TEST_H, images, screen))
+    spritelist[-1].set_animation(0, 2, 1, True)
 
-    screen = pygame.display.set_mode((TEST_CW*TEST_CX, TEST_CH*TEST_CY), pygame.RESIZABLE)
-
-    tiles = TileSpawn(TEST_CX, TEST_CY, TEST_CW, TEST_CH, screen)
-    tiles.spawn_tiles()
-    while running:
+    pygame.display.set_caption("Snake Game by Me")
+    quit_game = False
+    while not quit_game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
+                quit_game = True
+
+        screen.fill((0, 0, 0))
+
+        for sprite in spritelist:
+            sprite.draw()
+            sprite.animate()
+            sprite.move(1, 0, 0.5)
 
         pygame.display.flip()
 
-
-
     pygame.quit()
     quit()
-import json
+    import json
 from os.path import exists
 import debug
 debug.DEBUG_LEVEL = 0
@@ -846,546 +1582,3 @@ if __name__ == "__main__":
     my_settings.read_settings
 
     #settings = Settings("settings.json", True)
-import pygame
-from imagelist import ImageList
-import debug
-import time
-
-TEST_X = 100
-TEST_Y = 100
-TEST_W = 30
-TEST_H = 30
-
-class MySprite():
-    def __init__(self, x, y, w, h, images, screen, angle=0):
-        valid = True
-        if x >= 0 and x <= screen.get_width():
-            self._x = x
-        else:
-            print("off screen (x)")
-            valid = False
-        if y >= 0 and y <= screen.get_height():
-            self._y = y
-        else:
-            print("off screen (y)")
-            valid = False
-        if w > 0:
-            self._w = w
-        else: 
-            print("width too small")
-        if h > 0:
-            self._h = h
-        else: 
-            print("Hieght too small")
-        self._images = images
-
-        if angle >= 0 and angle <= 360:
-            self._angle = angle
-        else:
-            self._angle = 0
-
-        self._screen = screen
-        
-        self._start_frame = 0
-        self._end_frame = 0
-        self._current_frame = 0
-        self._delay = -1
-        self._repeat = False
-        self._next_move = time.time()
-        self._move_delay = 0
-        
-
-        if valid == False:
-            print("SOMTHING WENT WRONG\n    Parametres:", "\nx:", x, "\ny:", y, "\nwidth:", w, "\nheight:", h)
-            exit(0)
-
-    def get_x(self):
-        return self._x
-
-    def set_x(self, x):
-        if x >= 0 and x < self._screen.get_width():
-            self._x = x
-        elif x < 0:
-            self._x = 0
-        else:
-            self._x = self._screen.get_width()
-        
-    def get_y(self):
-        return self._y
-
-    def set_y(self, y):
-        if y >= 0 and y < self._screen.get_height():
-            self._y = y
-        elif y < 0:
-            self._y = 0
-        else:
-            self._y = self._screen.get_height() - 1
-
-    x = property(get_x, set_x)
-    y = property(get_y, set_y)
-
-    def rotate(self, angle):
-        if angle >= 0 and angle <= 360:
-            self._angle = angle
-        else:
-            self._angle = 0
-
-    def set_pos(self, x, y):
-        self.set_x(x)
-        self.set_y(y)
-
-    def move(self, dx=None, dy=None, delay_move=None):
-        if not dx is None:
-            self._dx = dx
-        if not dy is None:
-            self._dy = dy
-        if not delay_move is None:
-            self._move_delay = delay_move
-            if not delay_move == self._move_delay:
-                self._next_move = time.time()
-
-        if time.time() > self._next_move:
-            self.set_x(self._x + self._dx)
-            self.set_y(self._y + self._dy)    
-            self._next_move += self._move_delay
-
-    def set_animation(self, start_frame=0, end_frame=0, delay=0, repeat=False):
-            if start_frame >= 0 and start_frame < len(self._images.images):
-                self._start_frame = start_frame
-            if end_frame >= 0 and end_frame < len(self._images.images) and start_frame <= end_frame:
-                self._end_frame = end_frame
-            if delay > 0:
-                self._delay = delay
-            if repeat:
-                self._repeat = True
-            else:
-                self._repeat = False
-
-
-            self._next_frame = time.time() + delay
-
-    def animate(self, reset_animation = False):
-        if not self._delay == -1:
-            if reset_animation == True:
-                self._current_frame = self._start_frame
-            else:
-                if time.time() > self._next_frame:
-                    if self._current_frame < self._end_frame:
-                        self._current_frame += 1
-                    elif self._repeat == True:
-                        self._current_frame = self._start_frame
-                    self._next_frame = self._next_frame + self._delay       
-
-    def set_frame(self, frame):
-        self._current_frame = frame
-            
-    def get_rect(self):
-        rect = pygame.Rect(0, 0, self._w, self._h)
-        rect.center = (self._x, self._y)
-        return rect
-
-    def collide(self, other_rect):
-        if isinstance(other_rect, pygame.Rect):
-            if not (self._y > other_rect.y + other_rect.h or self._x > other_rect.x + other_rect.w or self._x + self._w < other_rect.x or self._y + self._h < other_rect.y):
-                return True
-            else:
-                return False
-                
-    def draw(self):
-        self._screen.blit(pygame.transform.rotate(self._images.images[self._current_frame], self._angle), self.get_rect())
-
-
-# TESTING
-debug.DEBUG_LEVEL = 2
-if __name__ == "__main__":
-    pygame.init()
-    screen = pygame.display.set_mode((640, 480), pygame.RESIZABLE)
-    images = ImageList("images\\apple\\apple", TEST_W, TEST_H)
-
-    spritelist = []
-    spritelist.append(MySprite(TEST_X, TEST_Y, TEST_W, TEST_H, images, screen))
-    spritelist[-1].set_animation(0, 2, 1, True)
-    spritelist.append(MySprite(TEST_X + TEST_W, TEST_Y, TEST_W, TEST_H, images, screen))
-    spritelist[-1].set_animation(0, 2, 1, True)
-
-    pygame.display.set_caption("Snake Game by Me")
-    quit_game = False
-    while not quit_game:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                quit_game = True
-
-        screen.fill((0, 0, 0))
-
-        for sprite in spritelist:
-            sprite.draw()
-            sprite.animate()
-            sprite.move(1, 0, 0.5)
-
-        pygame.display.flip()
-
-    pygame.quit()
-    quit()
-    from os.path import exists
-import debug
-import pygame
-
-class ImageList():
-    def __init__(self, filename, width, height):
-        self._images = []
-        count = 0
-        while exists(filename+str(count)+'.png'):
-            image = pygame.image.load(filename+str(count)+'.png')
-            aspectratio = image.get_width() / image.get_height()
-            scaled = pygame.transform.scale(image, [width, height])
-            self._images.append(scaled)
-            count += 1
-
-    def get_images(self):
-        return self._images
-    
-    images = property(get_images, None, None)
-
-
-# TESTING
-debug.DEBUG_LEVEL = 2
-if __name__ == "__main__":
-    TEST_X = 100
-    TEST_Y = 100
-    TEST_W = 30
-    TEST_H = 30
-
-    image_obj = ImageList("images\\apple\\apple", 20, 20)
-    pygame.init()
-
-    my_rect = pygame.Rect(TEST_X, TEST_Y, TEST_W, TEST_H)
-
-    screen = pygame.display.set_mode((600, 400), pygame.RESIZABLE)
-    pygame.display.set_caption("Snake Game by Me")
-    quit_game = False
-    while not quit_game:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                quit_game = True
-
-        screen.blit(image_obj.images[0], my_rect)
-
-        pygame.display.flip()
-
-
-
-    pygame.quit()
-    quit()
-    """QUICK DEBUG MODULE
-
-	This module provides some quick functions for debug output
-	both to the screen and/or to a log file.
-	
-	Devlin Sakey - 2026
-"""
-from datetime import datetime   #Datetime Handling
-import time
-import os
-
-# This is the cumulative debug "level" where all lower levels will apply.
-DEBUG_LEVEL=0
-# Similar to debug level, but applies to the delay functions, when it's useful to have the program slow down.
-# set separately, as  the debug "level of detail" and slowdowns for diagnostic purposes might have different circumstances.
-DELAY_LEVEL=0
-# This is the filename for the error logging functions
-ERROR_LOG=None
-
-def set_debug_level(debug_level):
-	"""Set the debug level. This will set the debug level - primarily intended for when
-	not using the dot notation"""
-	global DEBUG_LEVEL
-	try:
-		if debug_level > 0:
-			DEBUG_LEVEL = int(debug_level)
-	except:
-		dprint( 0, "set_debug_level - This function expects an integer >= 0" )
-
-def set_delay_level(delay_level):
-	"""Set the delay level. This will set the delay level - primarily intended for when
-	not using the dot notation"""
-	global DELAY_LEVEL
-	try:
-		if delay_level > 0:
-			DELAY_LEVEL = int(delay_level)
-	except:
-		dprint( 0, "set_delay_level - This function expects an integer >= 0" )
-
-def set_error_log(file_name):
-	if len(file_name)>0:
-		ERROR_LOG = file_name
-	else:
-		ERROR_LOG = None
-
-def _logtime():
-	return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-def _filename_logtime():
-	return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-def _build_path(path):
-# will recursively construct a directory tree
-# expects \\ on the end of the path if the last item is a directory.
-	dprint(5,"build path:", path)
-	directory=os.path.dirname(path)
-	dprint(5,"directory:", os.path.splitdrive(directory)[1])
-	if len(os.path.splitdrive(directory)[1])>1:
-		_build_path(directory)
-		if not os.path.exists(directory):
-			dprint(4, "creating directory:", directory)
-			os.makedirs(directory) # I haven't made any attempt to trap this... The program SHOULD die if this can't happen.
-
-def dsleep(level,sleeptime):
-	"""Debug Sleep
-	- dsleep(<debug level>, <sleep time>)
-	- Specified in seconds. For inserting delays into the program at a specified debug level."""
-	if level<=DELAY_LEVEL:
-		time.sleep(sleeptime)
-	
-def dprint(level,*arg):
-	"""Debug Print
-	- dprint(<debug level>, <items to print. Similar to "print")
-	- Outputs items to screen at specified debug level."""
-	if level<=DEBUG_LEVEL:
-		if level>0:
-			print("  " * level, *arg)
-		else:
-			print( *arg )
-
-def fprint(level, log_path, *arg ):
-	"""Debug File Print
-	- fprint(<debug level>, <file path>, <items to print. Similar to "print")
-	- Outputs items to a file at specified debug level."""
-	if level<=DEBUG_LEVEL:
-		_build_path(log_path)
-		with open(log_path, 'a', encoding="utf-8") as f:
-			print(*arg, file=f)
-
-def lprint(level, log_path, *arg ):
-	"""Debug LOG File Print
-	- fprint(<debug level>, <file path>, <items to print. Similar to "print")
-	- Outputs items to a file with a timestamp at specified debug level."""
-	if level<=DEBUG_LEVEL:
-		_build_path(log_path)
-		fprint(level, log_path, _logtime() + " -" * level, *arg)			
-
-def eprint(level, *arg):
-	"""Debug Log File Print
-	- eprint(<debug level>, <file path>, <items to print. Similar to "print")
-	- Outputs items to the error log with a timestamp at specified DEBUG_LEVEL level."""
-	if level<=DEBUG_LEVEL and not ERROR_LOG is None:
-		print(" *" * level, *arg)
-		lprint(level, ERROR_LOG, *arg)
-	else:
-		print("--- Fatal Error --- \nERROR_LOG has not been set.")
-		exit(0)
-
-def bprint(screen_level, file_level, file_name, *arg):
-	"""Debug Screen and Log File Print
-	- fprint(<debug level>, <file path>, <items to print. Similar to "print")
-	- Passing no items to print to this will print a line without a date to the log
-	- Pass a null string ("") to print just a date."""
-	if not (type(screen_level) == int and type(file_level) == int):
-		print(" --- FATAL ---\n'bprint' function expects TWO debug levels.. one for the screen, one for the file")
-		exit(0)
-	dprint(screen_level, *arg)
-	if len(arg)==0:
-		fprint(file_level, file_name, *arg)
-	else:
-		lprint(file_level, file_name, *arg)
-
-import pygame
-import math
-
-class Button():
-    def __init__(self, font=None, text="", screen=None, state="link", options=None, index=0, count=None, pos_index=None, x=0, y=0):
-        if count != None:
-            self._x = screen.get_width()/2
-            self._y = (2*pos_index)*(screen.get_height()/(((count+1)*2)))
-        else:
-            self._x = x
-            self._y = y
-        self._screen = screen
-        self._font = font
-        self._text_input = text
-        self._in_hovered = False
-
-        self._state = state
-        self._index = index
-        if options != None:
-            self._options = options
-        if self._state == "link":
-            self.link()
-        if self._state == "multi":
-            self.multi()
-
-        self._text_rect = self._text.get_rect(center=(self._x, self._y))
-        self._bg_surface = pygame.Surface((self._text_rect.width + 35, self._text_rect.height + 20), pygame.SRCALPHA)
-        self._bg_rect = self._bg_surface.get_rect(center=(self._x, self._y))
-        self._draw_rect = self._bg_rect.copy()
-
-        self._bob_intensity = 0.0
-        self._transition_speed = 0.1
-        self._bob_range = 5    
-        self._bob_speed = 0.007     
-
-    def update(self, mouse_pos):
-        self._is_hovered = self._bg_rect.collidepoint(mouse_pos)
-
-        target_intensity = 1.0 if self._is_hovered else 0.0
-        self._bob_intensity += (target_intensity - self._bob_intensity) * self._transition_speed
-
-        ticks = pygame.time.get_ticks()
-        raw_bob = math.sin(ticks * self._bob_speed) * self._bob_range
-
-        scale = 1 + (0.08 * self._bob_intensity)
-
-        width = (self._text_rect.width + 35) * scale
-        height = (self._text_rect.height + 20) * scale
-
-        self._draw_rect = pygame.Rect(0, 0, width, height)
-        self._draw_rect.center = (self._x, self._y + raw_bob * self._bob_intensity)
-
-    def link(self):
-        self._text = self._font.render(self._text_input, True, (255, 255, 255))
-
-    def multi(self):
-        self._text = self._font.render(f"{self._text_input}: {self._options[self._index]}", True, (255, 255, 255))
-
-    def draw(self):
-        self.update(pygame.mouse.get_pos())
-        self._bg_surface = pygame.Surface((self._draw_rect.width, self._draw_rect.height), pygame.SRCALPHA)
-
-        self._bg_surface.fill((200, 200, 200, 150))
-        self._screen.blit(self._bg_surface, self._draw_rect)
-
-        self._text_rect = self._text.get_rect(center=self._draw_rect.center)
-        self._screen.blit(self._text, self._text_rect)
-
-    def pressed(self, position):
-        rect = self._draw_rect
-
-        if self._state == "link":
-            return rect.collidepoint(position)
-
-        elif self._state == "multi":
-            if rect.collidepoint(position):
-                if self._index < len(self._options) - 1:
-                    self._index += 1
-                else:
-                    self._index = 0
-
-                self.multi()
-
-            return self._index
-import pygame
-import math
-
-class BobbingButton:
-    def __init__(self, x, y, width, height, text="", base_color=(0, 150, 255), hover_color=(0, 255, 0)):
-        # 1. Geometry and State
-        self.base_rect = pygame.Rect(x, y, width, height)
-        self.draw_rect = self.base_rect.copy()
-        self.is_hovered = False
-        
-        # 2. Colors and Text
-        self.base_color = base_color
-        self.hover_color = hover_color
-        self.current_color = base_color
-        self.text = text
-        self.font = pygame.font.SysFont(None, 24)
-
-        # 3. Animation Variables
-        self.bob_intensity = 0.0
-        self.transition_speed = 0.1  # Higher = snaps faster, Lower = smoother
-        self.bob_range = 3          # Max pixels it moves up/down
-        self.bob_speed = 0.007        # Speed of the sine wave oscillation
-
-    def update(self, mouse_pos):
-        """Handles hover detection and smooth animation math."""
-        # Check hover state against the stationary base position
-        self.is_hovered = self.base_rect.collidepoint(mouse_pos)
-
-        # Linear Interpolation (Lerp) for smooth dampening
-        target_intensity = 1.0 if self.is_hovered else 0.0
-        self.bob_intensity += (target_intensity - self.bob_intensity) * self.transition_speed
-
-        # Reset draw rect to base, then apply the dampened sine wave offset
-        self.draw_rect = self.base_rect.copy()
-        ticks = pygame.time.get_ticks()
-        
-        raw_bob = math.sin(ticks * self.bob_speed) * self.bob_range
-        self.draw_rect.y += raw_bob * self.bob_intensity
-
-        # Smoothly blend the color based on animation intensity
-        self.current_color = (
-            int(self.base_color[0] + (self.hover_color[0] - self.base_color[0]) * self.bob_intensity),
-            int(self.base_color[1] + (self.hover_color[1] - self.base_color[1]) * self.bob_intensity),
-            int(self.base_color[2] + (self.hover_color[2] - self.base_color[2]) * self.bob_intensity)
-        )
-
-    def draw(self, surface):
-        """Renders the button and its centered text onto the screen."""
-        # Draw button body
-        pygame.draw.rect(surface, self.current_color, self.draw_rect)
-        
-        # Draw centered text (it will move smoothly with the button)
-        if self.text:
-            text_surf = self.font.render(self.text, True, (255, 255, 255))
-            text_rect = text_surf.get_rect(center=self.draw_rect.center)
-            surface.blit(text_surf, text_rect)
-
-    def handle_event(self, event):
-        """Returns True if the button is successfully clicked."""
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.is_hovered:
-                return True
-        return False
-
-
-# ==========================================
-# EXAMPLE USAGE IN A PYGAME LOOP
-# ==========================================
-if __name__ == "__main__":
-    pygame.init()
-    screen = pygame.display.set_mode((500, 400))
-    clock = pygame.time.Clock()
-
-    # Instantiate multiple buttons easily
-    btn_start = BobbingButton(75, 175, 140, 50, "Start Game")
-    btn_quit = BobbingButton(285, 175, 140, 50, "Quit", base_color=(200, 50, 50), hover_color=(255, 100, 100))
-
-    buttons = [btn_start, btn_quit]
-
-    running = True
-    while running:
-        mouse_position = pygame.mouse.get_pos()
-        
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-                
-            # Handle clicks
-            if btn_start.handle_event(event):
-                print("Start Game Triggered!")
-            if btn_quit.handle_event(event):
-                print("Quit Triggered!")
-                running = False
-
-        # Update all buttons
-        for btn in buttons:
-            btn.update(mouse_position)
-
-        # Draw everything
-        screen.fill((30, 30, 30))
-        for btn in buttons:
-            btn.draw(screen)
-            
-        pygame.display.flip()
-        clock.tick(60)
-
-    pygame.quit()

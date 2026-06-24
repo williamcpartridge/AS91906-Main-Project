@@ -1,11 +1,12 @@
 import pygame
 import math
+from settings import Settings
 
 class Button():
     DEFAULT_TEXT_COLOR = (255, 255, 255)
     DEFAULT_BG_COLOR = (200, 200, 200, 150)
     BORDER_WIDTH, BORDER_HEIGHT = 35, 20
-    def __init__(self, font=None, text="", screen=None, state="link", func=None, options=None, index=0, count=None, pos_index=None, x=None, y=None):
+    def __init__(self, font=None, text="", screen=None, state="link", func=None, options=None, index=0, count=None, pos_index=None, x=None, y=None, value=5):
         pygame.init()
 
         self._func = func
@@ -15,6 +16,10 @@ class Button():
         self._in_hovered = False
         self._text = self._font.render(self._text_input, True, Button.DEFAULT_TEXT_COLOR)
 
+        # input state variables
+        self._value = value
+        self._input_active = False
+
         self._state = state
         self._index = index
         if options != None:
@@ -23,11 +28,17 @@ class Button():
             self.link()
         if self._state == "multi":
             self.multi()
+        if self._state == "input":
+            self.input()
 
         self._bg_width, self._bg_height = self._text.get_width() + Button.BORDER_WIDTH, self._text.get_height() + Button.BORDER_WIDTH
 
         if count != None and index != None: # this needs fixing checks for valid x and y
-            self._x = self._screen.get_width()/2
+            if x != None:
+                self._x = x
+            else:
+                self._x = self._screen.get_width()/2
+
             self._y = (2*pos_index)*(self._screen.get_height()/(((count+1)*2)))
 
         elif x != None and y != None:
@@ -60,8 +71,27 @@ class Button():
     def get_func(self):
         return self._func
 
-    def update(self, mouse_pos):
+    def update(self, mouse_pos, num=None):
         self._is_hovered = self._bg_rect.collidepoint(mouse_pos)
+
+        if self._state == "input":
+            if num != None and self._input_active:
+                if self._value != 0:
+                    if num == -1 and len(str(self._value)) > 1:
+                        self._value = str(self._value)
+                        self._value = self._value[:-1]
+                        self._value = int(self._value)
+                    elif num == -1 and len(str(self._value)) == 1:
+                        self._value = 0
+                    elif num != -1:
+                        self._value = int(f'{str(self._value)}{num}')
+                elif num != -1:
+                    self._value = num
+            if self._value > Settings.MAX_ACCROSS and self._input_active == False:
+                self._value = Settings.MAX_ACCROSS
+            elif self._value < Settings.MIN_ACCROSS and self._input_active == False:
+                self._value = Settings.MIN_ACCROSS
+            self.input()
 
         target_intensity = 1.0 if self._is_hovered else 0.0
         self._bob_intensity += (target_intensity - self._bob_intensity) * self._transition_speed
@@ -83,8 +113,14 @@ class Button():
     def multi(self):
         self._text = self._font.render(f"{self._text_input}: {self._options[self._index]}", True, Button.DEFAULT_TEXT_COLOR)
 
+    def input(self):
+        self._text = self._font.render(f"{self._text_input}{self._value}", True, Button.DEFAULT_TEXT_COLOR)
+
+    def get_val(self):
+        return self._value
+
     def draw(self):
-        self.update(pygame.mouse.get_pos())
+        #self.update(pygame.mouse.get_pos())
         self._bg_surface = pygame.Surface((self._draw_rect.width, self._draw_rect.height), pygame.SRCALPHA)
 
         self._bg_surface.fill(Button.DEFAULT_BG_COLOR)
@@ -110,3 +146,11 @@ class Button():
                 self.multi()
 
             return self._index
+        
+        elif self._state == "input":
+            if rect.collidepoint(position):
+                if self._input_active:
+                    self._input_active = False
+                else:
+                    self._input_active = True
+            return rect.collidepoint(position)
