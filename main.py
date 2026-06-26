@@ -107,9 +107,11 @@ INC = [
 ]
 
 class Snake():
-    """Snake class handles snake movement and segment management"""
-    def __init__(self, movement, cell_w, cell_h, cell_cx, cell_cy, dir_x, dir_y, angle, canvas):
-        """initiating variables for the snake class"""
+    """Snake class handle snake movement and segment management."""
+
+    def __init__(self, movement, cell_w, cell_h, cell_cx, 
+                 cell_cy, dir_x, dir_y, angle, canvas):
+        """Initiate variables for the snake class."""
         self._movement = movement
         self._cell_w = cell_w
         self._cell_h = cell_h
@@ -121,68 +123,75 @@ class Snake():
         self._angle = angle
         self._add_segment = False
 
-        self._snake_head_img = ImageList("images\\snake\\head\\snake_head", cell_width, cell_height) # gets list of images for snake head
-        self._snake_body_img = ImageList("images\\snake\\body\\snake_body", cell_width, cell_height) # gets list of images for snake body
+        self._snake_head_img = ImageList("images\\snake\\head\\snake_head", 
+                                         self._cell_w, self._cell_h)  # gets list of images for snake head
+        self._snake_body_img = ImageList("images\\snake\\body\\snake_body", 
+                                         self._cell_w, self._cell_h)  # gets list of images for snake body
 
         snake_x = self._cell_w+(self._cell_w/2)
         snake_y = self._cell_h/2
-        self._segments = [MySprite(snake_x, snake_y, self._cell_w, self._cell_h, self._snake_head_img, self._canvas, self._angle), \
-                MySprite(snake_x - self._cell_w, snake_y, self._cell_w, self._cell_h, self._snake_body_img, self._canvas, self._angle)] # creates starting list of snake segments with mysprite objects
+        self._segments = [MySprite(snake_x, snake_y, self._cell_w, self._cell_h, 
+                                   self._snake_head_img, self._canvas, self._angle),
+                                   MySprite(snake_x - self._cell_w, snake_y, self._cell_w, 
+                                   self._cell_h, self._snake_body_img, self._canvas, self._angle)]  # creates starting list of snake segments with mysprite objects
 
-    def get_head_pos(self): 
-        """returns the (x, y) position of the snakes head"""
+    def get_head_pos(self):
+        """Return the (x, y) position of the snakes head."""
         return (self._segments[0].get_x(), self._segments[0].get_y())
-    
-    def get_cell_poss(self): 
-        """get the cell that each snake segment is in"""
+
+    def get_cell_poss(self):
+        """Get the cell that each snake segment is in."""
         temp = []
         for seg in self._segments:
-            temp.append((self.get_cell_x(seg.get_x()), self.get_cell_y(seg.get_y())))
+            temp.append((self.get_cell_x(seg.get_x()), 
+                         self.get_cell_y(seg.get_y())))
         #debug.dprint(2, temp)
         return temp
 
     def get_cell_x(self, x):
-        """get the x position of a snake seg"""
+        """Get the x position of a snake seg."""
         return int(x/self._cell_w)
 
     def get_cell_y(self, y):
-        """get the y position of a snake seg"""
+        """Get the y position of a snake seg."""
         return int(y/self._cell_h)
     
     def set_dir_x(self, dir_x): 
-        """set the x part of the direction vector for the snake"""
+        """Set the x part of the direction vector for the snake."""
         self._dir_x = dir_x
     
     def get_dir_x(self):
-        """get the x part of the direction vector of the snake"""
+        """Get the x part of the direction vector of the snake."""
         return self._dir_x
 
     def set_dir_y(self, dir_y):
-        """set the y part of the direction vector for the snake"""
+        """Set the y part of the direction vector for the snake."""
         self._dir_y = dir_y
 
     def get_dir_y(self):
-        """get the y part of the direction vector of the snake"""
+        """Get the y part of the direction vector of the snake."""
         return self._dir_y
 
     def set_angle(self, angle):
-        """sets the direction the snake sprites are pointing"""
+        """Set the direction the snake sprites are pointing."""
         self._angle = angle
 
     def get_angle(self):
-        """gets the direction the snake sprites are pointing"""
+        """Get the direction the snake sprites are pointing."""
         return self._angle
 
     def set_movement(self, dir_x, dir_y, angle):
-        """sets the direction vector and angle of the snake"""
+        """Set the direction vector and angle of the snake."""
         self.set_dir_x(dir_x)
         self.set_dir_y(dir_y)
         self.set_angle(angle)
 
-    def get_movement(self): # gets the direction vector and angle of the snake
+    def get_movement(self): 
+        """Get the direction vector and angle of the snake."""
         return (self.get_dir_x(), self.get_dir_y(), self.get_angle())
 
-    def step(self): # handles what happens when the snake steps forward
+    def step(self): 
+        """Handle what happens when the snake steps forward."""
         tiles.tile(self._segments[-2].get_x(), self._segments[-2].get_y()) # replaces the tiles that have been affected
         tiles.tile(self._segments[-1].get_x(), self._segments[-1].get_y())
         tiles.tile(self._segments[0].get_x(), self._segments[0].get_y())
@@ -198,12 +207,14 @@ class Snake():
 
             self._segments[i].move(self._cell_w*self._movement[i][0], self._cell_h*self._movement[i][1])
 
-    def cell_collide(self, obj): # checks for collision with another object
+    def cell_collide(self, obj): 
+        """Check for collision with another object."""
         if self.get_cell_x(self._segments[0].get_x()) == self.get_cell_x(obj.get_x()) and \
             self.get_cell_y(self._segments[0].get_y()) == self.get_cell_y(obj.get_y()):
             return True
 
-    def new_seg(self): # creates and new snake segment to be added to the list
+    def new_seg(self): 
+        """Creates and new snake segment to be added to the list."""
         new = MySprite(self._segments[-1].get_x() - self._movement[-1][0]*self._cell_w, \
                        self._segments[-1].get_y() - self._movement[-1][1]*self._cell_h, \
                         self._cell_w, self._cell_h, self._snake_body_img, self._canvas)
@@ -211,11 +222,13 @@ class Snake():
         new.set_frame(0)
         return new
 
-    def append_seg(self, new): # adds the new segment to the snake list
+    def append_seg(self, new): 
+        """Adds the new segment to the snake list."""
         self._segments.append(new)
         
 
-    def check_rotation(self): # handles the rotation of every snake segment
+    def check_rotation(self): 
+        """Handle the rotation of every snake segment."""
         for i in range(len(self._movement)):
             if i != 0 and len(self._segments) > 2 and i != len(self._movement)-1:
                 if self._movement[i][2] != self._movement[i-1][2]:
@@ -233,7 +246,8 @@ class Snake():
                 else:
                     self._segments[i].set_frame(1)
 
-    def death_check(self): # handles all death cases. collision with self, collision with wall
+    def death_check(self): 
+        """Handles all death cases, collision with self, collision with wall."""
         for segment in self._segments:
             if segment != self._segments[0]:
                 if self.cell_collide(segment):
@@ -243,22 +257,25 @@ class Snake():
             self._segments[0].get_y() < self._cell_h/2 or self._segments[0].get_y() > self._canvas.get_height() - self._cell_h/2:
             return True
         
-    def start(self): # starts the movement of the first snake segments
+    def start(self): 
+        """Start movement of first snake segments."""
         for segment in self._segments:
             segment.move(cell_width, 0, 0.1)
 
-    def win_check(self): # checks if the player has filled the game board
+    def win_check(self): 
+        """Check if the player has filled the game board."""
         if len(self._segments) == self._cell_cx*self._cell_cy:
             return True
         else:
             return False
 
-    def draw(self): # draws each snake segment to the screen
+    def draw(self): 
+        """Draw each snake segment to the screen."""
         for seg in self._segments:
             seg.draw()
 
 class Apple(): 
-    """Handles spwing apples and buffs for apple types"""
+    """Handle spwing apples and buffs for apple types."""
     def __init__(self, cell_w, cell_h, cell_cx, cell_cy, apple_count, canvas):  # initiating variables for the apple class
         self._cell_w = cell_w
         self._cell_h = cell_h
@@ -272,7 +289,8 @@ class Apple():
         self._type_list = []
 
 
-    def spawn_apple(self, snake_cells): # handles the spawning of the apples
+    def spawn_apple(self, snake_cells): 
+        """Handle the spawning of the apples."""
         if len(self._apple_list) < self._apple_count and ((self._cell_cx*self._cell_cy) - len(snake_cells)) > self._apple_count: # checks of an apples is needed
             done = False
             type = self.apple_type() # gets the type of apple (normal, golden, boost)
@@ -300,14 +318,16 @@ class Apple():
 
             #self._apple_list[-1].set_animation(0, 1, 1, False)
 
-    def apple_type(self): # choses random apple type
+    def apple_type(self): 
+        """Choose random apple type."""
         for upgrade in self._upgrades.keys():
             if self._upgrades[upgrade][0]:
                 if random.randint(1, 5) == 5:
                     return upgrade
         return "Normal"
     
-    def draw(self): # draws all apples to the screen
+    def draw(self): 
+        """Draw all apples to the screen."""
         for i in range(len(self._apple_list)):
             if self._type_list[i] == "Normal":
                 self._apple_list[i].set_frame(0)
@@ -317,25 +337,29 @@ class Apple():
             self._apple_list[i].draw()
             
 
-    def get_apples(self): # returns the list of apples on screen
+    def get_apples(self): 
+        """Return the list of apples on screen."""
         return self._apple_list
     
-    def get_type(self): # returns every type in apple list
+    def get_type(self):
+        """Return every type in apple list."""
         return self._type_list
     
-    def rm(self, apple): # removes an apple from the apple sprites list and type list
+    def rm(self, apple):
+        """Remove an apple from the apple sprites list and type list."""
         self._apple_list.pop(apple)
         self._type_list.pop(apple)
 
 class LeaderBoard(): 
-    """handles the reading and writing to the leaderboard files"""
+    """Handle the reading and writing to the leaderboard files."""
     def __init__(self, filename, canvas):  # initiating variables for the leaderboard class
         self._filename = filename
         self._leaderboard = {}
         self.read_leaderboard()
         self._canvas = canvas
 
-    def write_leaderboard(self, score, size, username): # handles writing scores to the leaderboard
+    def write_leaderboard(self, score, size, username): 
+        """Handle writing scores to the leaderboard"""
         # checks for size/catagory
         if size == (6, 5):
             size = "small"
@@ -356,7 +380,8 @@ class LeaderBoard():
                 self._leaderboard[size][username] = score
                 self.write_json(self._filename, self._leaderboard)
 
-    def write_json(self, filename, obj): # writes and sorts the scores to leaderboard file
+    def write_json(self, filename, obj): 
+        """Writes and sorts the scores to leaderboard file."""
         sorted_obj = {}
 
         for size, board in obj.items():
@@ -368,10 +393,12 @@ class LeaderBoard():
         debug.dprint(1, "Data written successfully")
         debug.dprint(1, sorted_obj)
 
-    def read_leaderboard(self): # gets the scores for the leaderboard
+    def read_leaderboard(self): 
+        """Get the scores for the leaderboard."""
         self._leaderboard = self.json_read(self._filename)
 
-    def json_read(self, filename): # reads the scores from the leaderboard file
+    def json_read(self, filename): 
+        """Read the scores from the leaderboard file."""
         try:
             with open(filename, 'r') as f:
                 data = json.load(f)
@@ -383,7 +410,7 @@ class LeaderBoard():
             return {}
         
     def change_user(self, size, user, prev_user):
-
+        """Do."""
         if size == (6, 5):
             size = "small"
         elif size == (10, 7):
@@ -400,7 +427,7 @@ class LeaderBoard():
             self.write_json(self._filename, self._leaderboard)
 
 def get_scaled_mouse_pos(screen_x, screen_y): 
-    """Scales mouse position"""
+    """Scale mouse position."""
     scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
 
     offset_x = (screen_x - LOGICAL_X * scale) // 2
@@ -414,7 +441,7 @@ def get_scaled_mouse_pos(screen_x, screen_y):
     )
 
 def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, username, screen_x, screen_y, score): 
-    """menu loop containing options to play edit settings or qiot the game"""
+    """Menu loop containing options to play edit settings or qiot the game."""
     global main_running # this is global to use as a cascading exit
     global username_set
     global change
@@ -425,6 +452,7 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, user
     menu_channel.unpause()
 
     def play():
+        """Do."""
         (cx, cy) = settings.get_size()
         screen.fill((0, 0, 0))
         game_canvas = pygame.Surface((cx * cell_width, cy * cell_height))
@@ -435,10 +463,12 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, user
         main_game_loop(game_canvas, screen, cx, cy, username, score, screen_x, screen_y)
 
     def open_settings():
+        """Do."""
         click.play()
         settings_menu(canvas, screen, screen_x, screen_y)
 
     def open_leaderboard():
+        """Do."""
         menu_channel.pause()
         leaderboard_channel.unpause()
         leaderboard.read_leaderboard()
@@ -446,12 +476,14 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, user
         leaderboard_menu(canvas, screen, leaderboard, screen_x, screen_y, score)
 
     def quit_game():
+        """Do."""
         global main_running
         main_running = False
         exit.play()
         print("bye bye")
 
     def change_username():
+        """Do."""
         global username_set
         global change
         click.play()
@@ -459,6 +491,7 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, user
         change = False
 
     def change_user():
+        """Do."""
         global username_set
         global change
         global name
@@ -577,7 +610,8 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, user
         pygame.display.flip()
         clock.tick(FPS)
 
-def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, screen_y): # game loop handles inputs and talks to snake and apple clases to run the game
+def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, screen_y): 
+    """Handle inputs and talks to snake and apple clases to run the game."""
     global main_running
     time = 0
     tiles.spawn_tiles(cell_cx, cell_cy, canvas)
@@ -709,7 +743,8 @@ def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, 
         pygame.display.flip()
         clock.tick(FPS)
 
-def settings_menu(canvas, screen, screen_x, screen_y): # displays settings that you can edit
+def settings_menu(canvas, screen, screen_x, screen_y): 
+    """Display settings that you can edit."""
     global main_running
     settings.read_settings()
     font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', int(LOGICAL_X/20))
@@ -817,7 +852,8 @@ def settings_menu(canvas, screen, screen_x, screen_y): # displays settings that 
         pygame.display.flip()
         clock.tick(FPS)
 
-def leaderboard_menu(canvas, screen, leaderboard_obj, screen_x, screen_y, score): # displays the leaderboard
+def leaderboard_menu(canvas, screen, leaderboard_obj, screen_x, screen_y, score): 
+    """Display the leaderboard."""
     font_title = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 40)
     font_text = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 25)
     font_text_small = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 18)
@@ -888,7 +924,8 @@ def leaderboard_menu(canvas, screen, leaderboard_obj, screen_x, screen_y, score)
         pygame.display.flip()
         clock.tick(FPS)
 
-if __name__ == "__main__": # game initialisation
+if __name__ == "__main__": 
+    """Initialise game."""
     os.environ['SDL_VIDEO_WINDOW_POS'] = "0,30" # window positioning at (x=0, y=30)
 
     pygame.init()
