@@ -9,12 +9,14 @@
         "willza": 68,
         "w": 24,
         "taj": 23,
+        "ez": 23,
         "tai": 21,
         "dom": 17,
         "soph": 17,
         "julzy": 10,
         "eli": 7,
-        "jay": 7
+        "jay": 7,
+        "asdfadfaasdfsdfdasfa": 1
     },
     "large": {
         "willza": 174,
@@ -24,8 +26,10 @@
         "mum": 13
     },
     "custom": {
+        "ez": 25,
         "fgh": 23,
         "w": 5,
-        "y": 0
+        "y": 0,
+        "asdfadfaasdfsdfdasfa": 0
     }
 }

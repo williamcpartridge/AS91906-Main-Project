@@ -110,7 +110,7 @@ class Snake():
     """Snake class handle snake movement and segment management."""
 
     def __init__(self, movement, cell_w, cell_h, cell_cx, 
-                 cell_cy, dir_x, dir_y, angle, canvas):
+                 cell_cy, dir_x, dir_y, angle, canvas, hue, brightness):
         """Initiate variables for the snake class."""
         self._movement = movement
         self._cell_w = cell_w
@@ -123,6 +123,9 @@ class Snake():
         self._angle = angle
         self._add_segment = False
 
+        self._hue = hue
+        self._brightness = brightness
+
         self._snake_head_img = ImageList("images\\snake\\head\\snake_head", 
                                          self._cell_w, self._cell_h)  # gets list of images for snake head
         self._snake_body_img = ImageList("images\\snake\\body\\snake_body", 
@@ -131,9 +134,9 @@ class Snake():
         snake_x = self._cell_w+(self._cell_w/2)
         snake_y = self._cell_h/2
         self._segments = [MySprite(snake_x, snake_y, self._cell_w, self._cell_h, 
-                                   self._snake_head_img, self._canvas, self._angle),
+                                   self._snake_head_img, self._canvas, self._angle, self._hue, self._brightness),
                                    MySprite(snake_x - self._cell_w, snake_y, self._cell_w, 
-                                   self._cell_h, self._snake_body_img, self._canvas, self._angle)]  # creates starting list of snake segments with mysprite objects
+                                   self._cell_h, self._snake_body_img, self._canvas, self._angle, self._hue, self._brightness)]  # creates starting list of snake segments with mysprite objects
 
     def get_head_pos(self):
         """Return the (x, y) position of the snakes head."""
@@ -217,7 +220,7 @@ class Snake():
         """Creates and new snake segment to be added to the list."""
         new = MySprite(self._segments[-1].get_x() - self._movement[-1][0]*self._cell_w, \
                        self._segments[-1].get_y() - self._movement[-1][1]*self._cell_h, \
-                        self._cell_w, self._cell_h, self._snake_body_img, self._canvas)
+                        self._cell_w, self._cell_h, self._snake_body_img, self._canvas, angle=0, hue=self._hue, brightness=self._brightness)
         new.rotate(self._movement[-1][2])
         new.set_frame(0)
         return new
@@ -440,7 +443,28 @@ def get_scaled_mouse_pos(screen_x, screen_y):
         (my - offset_y) / scale
     )
 
-def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, username, screen_x, screen_y, score): 
+def adjust_hue_and_brightness(surface, hue_shift=0, brightness_shift=0):
+    """Modifies the hue and brightness using PixelArray."""
+    modified_surface = surface.copy()
+    
+    with pygame.PixelArray(modified_surface) as pixels:
+        for x in range(modified_surface.get_width()):
+            for y in range(modified_surface.get_height()):
+
+                raw_pixel = pixels[x, y]
+                color = pygame.Color(surface.unmap_rgb(raw_pixel))
+                
+                h, s, l, a = color.hsla
+                
+                new_h = (h + hue_shift) % 360
+                new_l = max(0.0, min(100.0, l + brightness_shift))
+                
+                color.hsla = (new_h, s, new_l, a)
+                pixels[x, y] = color
+                
+    return modified_surface
+
+def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, username, screen_x, screen_y, score, hue, brightness): 
     """Menu loop containing options to play edit settings or qiot the game."""
     global main_running # this is global to use as a cascading exit
     global username_set
@@ -460,12 +484,14 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, user
         menu_channel.pause()
         game_channel.play(game_music, loops=-1)
         game_channel.unpause()
-        main_game_loop(game_canvas, screen, cx, cy, username, score, screen_x, screen_y)
+        nonlocal hue, brightness
+        main_game_loop(game_canvas, screen, cx, cy, username, score, screen_x, screen_y, hue, brightness)
 
     def open_settings():
         """Do."""
+        nonlocal hue, brightness
         click.play()
-        settings_menu(canvas, screen, screen_x, screen_y)
+        hue, brightness = settings_menu(canvas, screen, screen_x, screen_y, hue, brightness)
 
     def open_leaderboard():
         """Do."""
@@ -610,7 +636,7 @@ def main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, user
         pygame.display.flip()
         clock.tick(FPS)
 
-def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, screen_y): 
+def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, screen_y, hue, brightness): 
     """Handle inputs and talks to snake and apple clases to run the game."""
     global main_running
     time = 0
@@ -623,7 +649,7 @@ def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, 
     eaten = False
     (cell_cx, cell_cy) = settings.get_size()
     speed = settings.get_speed()
-    snake = Snake(movement, cell_width, cell_height, cell_cx, cell_cy, dir_x=1, dir_y=0, angle=270, canvas=canvas)
+    snake = Snake(movement, cell_width, cell_height, cell_cx, cell_cy, dir_x=1, dir_y=0, angle=270, canvas=canvas, hue=hue, brightness=brightness)
     apple = Apple(cell_width, cell_height, cell_cx, cell_cy, apple_count, canvas)
     font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14)
     score_text = font.render(str(score), True, (0, 0, 0))
@@ -743,7 +769,66 @@ def main_game_loop(canvas, screen, cell_cx, cell_cy, username, score, screen_x, 
         pygame.display.flip()
         clock.tick(FPS)
 
-def settings_menu(canvas, screen, screen_x, screen_y): 
+def set_color(canvas, hue, brightness):
+    base_image = pygame.image.load('images\snake\head\snake_head0.png')
+
+    # Initial modifier states
+
+    running = True
+    while running:
+        canvas.fill((40, 40, 40)) # Dark background
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    running = False
+                
+        # Capture keyboard inputs to adjust variables dynamically
+        keys = pygame.key.get_pressed()
+        
+        # Left/Right changes Hue
+        if keys[pygame.K_LEFT]:  hue = (hue - 2) % 360
+        if keys[pygame.K_RIGHT]: hue = (hue + 2) % 360
+        
+        # Up/Down changes Brightness (Lightness)
+        if keys[pygame.K_UP]:    brightness = min(50, brightness + 1)
+        if keys[pygame.K_DOWN]:  brightness = max(-50, brightness - 1)
+
+        # Process the surface modifier
+        altered_image = adjust_hue_and_brightness(base_image, hue_shift=hue, brightness_shift=brightness)
+
+        # Render visuals to the screen
+        canvas.blit(base_image, (150, 200))     # Left side: Original reference
+        canvas.blit(altered_image, (450, 200))  # Right side: Modified output
+
+        # Simple HUD overlay instructions
+        font = pygame.font.SysFont(None, 24)
+        txt_hue = font.render(f"Hue Shift (Left/Right Arrows): {hue}°", True, (255, 255, 255))
+        txt_bright = font.render(f"Brightness Shift (Up/Down Arrows): {brightness}%", True, (255, 255, 255))
+        txt_orig = font.render("Original", True, (255, 255, 255))
+        txt_mod = font.render("Modified", True, (255, 255, 255))
+        
+        canvas.blit(txt_hue, (20, 20))
+        canvas.blit(txt_bright, (20, 50))
+        canvas.blit(txt_orig, (220, 170))
+        canvas.blit(txt_mod, (520, 170))
+
+        scale = min(screen_x / LOGICAL_X, screen_y / LOGICAL_Y)
+
+        scaled_canvas = pygame.transform.scale(canvas, (LOGICAL_X * scale, LOGICAL_Y * scale))
+
+        offset_x = (screen_x - LOGICAL_X * scale) / 2
+        offset_y = (screen_y - LOGICAL_Y * scale) / 2
+
+        screen.blit(scaled_canvas, (offset_x, offset_y))
+
+        pygame.display.flip()
+        clock.tick(60)
+    return hue, brightness
+
+def settings_menu(canvas, screen, screen_x, screen_y, hue, brightness): 
     """Display settings that you can edit."""
     global main_running
     settings.read_settings()
@@ -754,6 +839,10 @@ def settings_menu(canvas, screen, screen_x, screen_y):
     speed_game = [30, 20, 10]
     apples_button = ["1", "3", "5", "10"]
     apples_game = [1, 3, 5, 10]
+
+    def change_color():
+        nonlocal hue, brightness
+        hue, brightness = set_color(canvas, hue, brightness)
 
     key = None
     width_val, height_val = settings.get_size()
@@ -770,6 +859,7 @@ def settings_menu(canvas, screen, screen_x, screen_y):
     back = Button(count=5, pos_index=5, font=font, text="back", screen=canvas, state="link")
     width = Button(x=(canvas.get_width()/2)-100, count=5, pos_index=2, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14), text="Width: ", screen=canvas, state="input", value=width_val)
     height = Button(x=(canvas.get_width()/2)+100, count=5, pos_index=2, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 14), text="Height: ", screen=canvas, state="input", value=height_val)
+    color_button = Button(x=canvas.get_width() + 170, y=40, font=pygame.font.Font('fonts/PressStart2P-Regular.ttf', 20), text="Colour", screen=canvas, state="link", func=change_color)
     settings_open = True
 
     while settings_open:
@@ -794,6 +884,9 @@ def settings_menu(canvas, screen, screen_x, screen_y):
                     width._input_active = False
                 if not height.pressed(mouse_pos):
                     height._input_active = False
+                if color_button.pressed(mouse_pos):
+                    func = color_button.get_func()
+                    func()
                 if back.pressed(mouse_pos):
                     exit.play()
                     if size_index != 3:
@@ -832,6 +925,8 @@ def settings_menu(canvas, screen, screen_x, screen_y):
         apples.draw()
         back.update(mouse_pos)
         back.draw()
+        color_button.update(mouse_pos)
+        color_button.draw()
 
         if size_index == 3:
             width.update(mouse_pos, num=key)
@@ -851,6 +946,7 @@ def settings_menu(canvas, screen, screen_x, screen_y):
 
         pygame.display.flip()
         clock.tick(FPS)
+    return hue, brightness
 
 def leaderboard_menu(canvas, screen, leaderboard_obj, screen_x, screen_y, score): 
     """Display the leaderboard."""
@@ -861,12 +957,12 @@ def leaderboard_menu(canvas, screen, leaderboard_obj, screen_x, screen_y, score)
 
     back_button = Button(y=canvas.get_height()-70, x=canvas.get_width()/2, pos_index=1, font=font_back, text="Back", screen=canvas, state="link")
 
-    running = True
-    while running:
+    leader_running = True
+    while leader_running:
         mouse_pos = get_scaled_mouse_pos(screen_x, screen_y)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
+                leader_running = False
             if event.type == pygame.VIDEORESIZE:
                 (screen_x, screen_y) = event.size 
                 if fullscreen:
@@ -878,7 +974,7 @@ def leaderboard_menu(canvas, screen, leaderboard_obj, screen_x, screen_y, score)
                     exit.play()
                     leaderboard_channel.pause()
                     menu_channel.unpause()
-                    running = False
+                    leader_running = False
 
         canvas.fill((20, 20, 20))
 
@@ -889,6 +985,7 @@ def leaderboard_menu(canvas, screen, leaderboard_obj, screen_x, screen_y, score)
         x_offset = 0
 
         data = leaderboard_obj._leaderboard
+        
 
         if not data:
             empty = font_text.render("No scores yet", True, (200, 200, 200))
@@ -950,6 +1047,9 @@ if __name__ == "__main__":
 
     font = pygame.font.Font('fonts/PressStart2P-Regular.ttf', 75)
 
+    hue = 0
+    brightness = 0
+
     #sound init
     click = pygame.mixer.Sound('sounds/click.mp3')
     die = pygame.mixer.Sound('sounds/die.mp3')
@@ -998,7 +1098,7 @@ if __name__ == "__main__":
     bg_rect = bg_surf.get_rect(center=(canvas.get_width()/2, canvas.get_height()/2))
 
     main_running = True # making this global to enable cascading exit
-    main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, username, screen_x, screen_y, score) # start the program
+    main_menu(canvas, screen, bg_surf, bg_rect, cell_cx, cell_cy, settings, username, screen_x, screen_y, score, hue, brightness) # start the program
     debug.dprint(1, "game quitting")
 
 pygame.quit()

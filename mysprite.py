@@ -9,7 +9,7 @@ TEST_W = 30
 TEST_H = 30
 
 class MySprite():
-    def __init__(self, x, y, w, h, images, canvas, angle=0):
+    def __init__(self, x, y, w, h, images, canvas, angle=0, hue=0, brightness=0):
         valid = True
         if x >= 0 and x <= canvas.get_width():
             self._x = x
@@ -35,6 +35,9 @@ class MySprite():
             self._angle = angle
         else:
             self._angle = 0
+
+        self._hue = hue
+        self._brightness = brightness
 
         self._canvas = canvas
         
@@ -85,6 +88,31 @@ class MySprite():
     def set_pos(self, x, y):
         self.set_x(x)
         self.set_y(y)
+
+    def set_color(self, hue, brightness):
+        self._hue = hue
+        self._brightness = brightness
+
+    def adjust_hue_and_brightness(self, surface, hue_shift=0, brightness_shift=0):
+        """Modifies the hue and brightness using PixelArray."""
+        modified_surface = surface.copy()
+        
+        with pygame.PixelArray(modified_surface) as pixels:
+            for x in range(modified_surface.get_width()):
+                for y in range(modified_surface.get_height()):
+
+                    raw_pixel = pixels[x, y]
+                    color = pygame.Color(surface.unmap_rgb(raw_pixel))
+                    
+                    h, s, l, a = color.hsla
+                    
+                    new_h = (h + hue_shift) % 360
+                    new_l = max(0.0, min(100.0, l + brightness_shift))
+                    
+                    color.hsla = (new_h, s, new_l, a)
+                    pixels[x, y] = color
+                    
+        return modified_surface
 
     def move(self, dx=None, dy=None, delay_move=None):
         if not dx is None:
@@ -144,7 +172,15 @@ class MySprite():
                 return False
                 
     def draw(self):
-        self._canvas.blit(pygame.transform.rotate(self._images.images[self._current_frame], self._angle), self.get_rect())
+        img = self._images.images[self._current_frame]
+
+        if self._hue != 0 or self._brightness != 0:
+            print(self._hue)
+            img = self.adjust_hue_and_brightness(img, hue_shift=self._hue, brightness_shift=self._brightness)
+
+        img = pygame.transform.rotate(img, self._angle)
+
+        self._canvas.blit(img, self.get_rect())
 
 
 # TESTING
